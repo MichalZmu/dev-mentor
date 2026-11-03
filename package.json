@@ -1,26 +1,40 @@
 {
-  "name": "dev-mentor",
+  "name": "devmentor",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.17.0",
+    "npm": ">=10"
   },
-  "dependencies": {
-    "next": "16.4.3",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+  "scripts": {
+    "dev": "npm run dev --workspace=@devmentor/app",
+    "build": "npm run build --workspace=@devmentor/app",
+    "start": "npm run start --workspace=@devmentor/app",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "tsx --conditions=react-server --test packages/db/tests/*.test.ts packages/app/tests/*.test.ts",
+    "db:check": "npm run check --workspace=@devmentor/db",
+    "db:debug": "npm run orm --workspace=@devmentor/db -- debug",
+    "db:migration:create": "npm run orm --workspace=@devmentor/db -- migration:create",
+    "db:migrate": "npm run orm --workspace=@devmentor/db -- migration:up",
+    "db:migration:list": "npm run orm --workspace=@devmentor/db -- migration:list",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose stop postgres",
+    "ui:add": "shadcn add --cwd packages/app",
+    "db:migration:down": "npm run orm --workspace=@devmentor/db -- migration:down"
   },
   "devDependencies": {
-    "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.4.4",
+    "shadcn": "4.23.0",
+    "tsx": "4.23.15",
+    "typescript": "^5.9.3"
   }
 }

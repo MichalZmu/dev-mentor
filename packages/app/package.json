@@ -1,0 +1,27 @@
+{
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "name": "@devmentor/app",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@devmentor/core": "*",
+    "@devmentor/db": "*",
+    "@devmentor/ui": "*",
+    "awilix": "13.0.5",
+    "next": "16.4.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1",
+    "dotenv": "^17"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.4",
+    "tailwindcss": "4.3.4"
+  }
+}
