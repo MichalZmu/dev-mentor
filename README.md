@@ -138,9 +138,43 @@ npm run start
 
 ## Uruchomienie pełnego lokalnego demo
 
+Wymagania: Node 26.13.0, npm 11.20.0 oraz działający Docker z Compose.
+Z root repozytorium, także na świeżym checkout bez node_modules:
+
 ```bash
+npm run setup
+```
+
+Instalator sprawdza wersje narzędzi, instaluje brakujące lub nieaktualne zależności
+przez npm ci, tworzy tylko brakujący .env z .env.example, zapewnia gotowość
+PostgreSQL, sprawdza połączenie oraz wykonuje migracje i seed demo. Nie instaluje
+narzędzi systemowych i nie uruchamia web/workera ani CI.
+Kontrola zależności obejmuje także załadowanie modułów potrzebnych do migracji
+i seeda. Brakujący moduł powoduje ponowną instalację przed uruchomieniem
+PostgreSQL; nieudana naprawa kończy setup bez dalszych zmian w bazie.
+
+Ponowienie npm run setup zachowuje istniejący .env, konta, hasła, role, cele
+i wolumen bazy. Zmienne procesu mają pierwszeństwo. Instalator wymaga jawnego
+trybu demo i lokalnych URL; istniejącą konfigurację popraw samodzielnie według
+wskazówki błędu. Zależności są ponownie weryfikowane, migracje sprawdzane przy
+każdym starcie, a ukończony seed pomijany na podstawie stanu w danej bazie.
+Błąd zatrzymuje zależne kroki; po jego usunięciu uruchom to samo polecenie.
+Nowa baza nie dziedziczy znacznika poprzedniej.
+
+Po sukcesie uruchom aplikację i worker w osobnych terminalach:
+
+```bash
+npm run dev --workspace=@devmentor/app -- --hostname 127.0.0.1
+npm run worker
+```
+
+Pełna ścieżka ręczna pozostaje dostępna (kopiuj .env tylko, gdy jeszcze go nie ma):
+
+```bash
+npm ci
 cp .env.example .env
 npm run db:up
+npm run db:check
 npm run migrate
 npm run seed:demo
 npm run dev --workspace=@devmentor/app -- --hostname 127.0.0.1
@@ -238,7 +272,7 @@ npm run test:e2e              # serwer produkcyjny :3100, desktop i mobile
 npm run security:check        # audit runtime i narzędzi z ograniczonymi wyjątkami
 ```
 
-`npm run format` poprawia formatowanie kodu i konfiguracji. Istniejące artefakty `.ai/`, koncepcja `docs/` i główne dokumenty Markdown mają własny format i są wyłączone z masowego formatowania. `deps:check` analizuje AST importów, publiczne eksporty pakietów, ich deklaracje i cykle; wykrywa również względne obejścia i importy tylko typów. Negatywne fixture testy sprawdzają te zakazy.
+`npm run format` poprawia formatowanie kodu i konfiguracji. Istniejące artefakty `.ai/`, koncepcja `docs/` i główne dokumenty Markdown mają własny format i są wyłączone z masowego formatowania. Zainstalowana dystrybucja `.agents/skills/` ma własne szablony, więc jest pomijana przez Prettiera i ESLinta; źródła pakietów, narzędzia projektu i testy nadal podlegają kontrolom. `deps:check` analizuje AST importów, publiczne eksporty pakietów, ich deklaracje i cykle; wykrywa również względne obejścia i importy tylko typów. Negatywne fixture testy sprawdzają te zakazy.
 
 Coverage obejmuje implementacje wszystkich czterech pakietów, stron, komponentów, API, instrumentacji, CLI, migracji i narzędzi projektu, także nieimportowane pliki. Vitest wymaga 100% lines, branches, functions i statements osobno dla każdego pliku. Testy jednostkowe adapterów używają kontrolowanych granic usług zewnętrznych; integracja i E2E osobno sprawdzają współpracę modułów.
 

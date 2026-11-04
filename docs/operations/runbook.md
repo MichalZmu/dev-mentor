@@ -2,12 +2,39 @@
 
 ## Lokalny tryb demonstracyjny
 
-Polecenia z root, Node 26.13.0 / npm 11.20.0 i Docker:
+Polecenia z root, Node 26.13.0 / npm 11.20.0 i Docker z Compose:
+
+```bash
+npm run setup
+```
+
+Polecenie działa bez wcześniejszego npm ci. Sprawdza zależności i instaluje je
+w razie potrzeby, tworzy brakujący .env, czeka na PostgreSQL, sprawdza połączenie,
+stosuje brakujące migracje i wykonuje seed. Zachowuje istniejący .env i
+pierwszeństwo zmiennych procesu; nie przestawia konfiguracji na demo.
+Wymaga APP_MODE=demo i lokalnych URL PostgreSQL/aplikacji.
+Kontrola zależności obejmuje także załadowanie modułów potrzebnych do migracji
+i seeda. Brakujący moduł powoduje ponowną instalację przed uruchomieniem
+PostgreSQL; nieudana naprawa kończy setup bez dalszych zmian w bazie.
+
+Ponowienie zachowuje dane i wolumen, nie resetuje haseł ani ról/celów.
+Znacznik seeda jest w bazie i powstaje atomowo z danymi domeny.
+Po błędzie popraw wskazaną konfigurację/infrastrukturę i ponów npm run setup;
+nowa baza wymaga własnego seeda. Migracje są sprawdzane zawsze.
+Instalator kończy się instrukcją uruchomienia web oraz workera w osobnych terminalach:
+
+```bash
+npm run dev --workspace=@devmentor/app -- --hostname 127.0.0.1
+npm run worker
+```
+
+Alternatywna pełna ścieżka ręczna (kopiuj .env wyłącznie, jeśli nie istnieje):
 
 ```bash
 npm ci
 cp .env.example .env
 npm run db:up
+npm run db:check
 npm run migrate
 npm run seed:demo
 npm run dev --workspace=@devmentor/app -- --hostname 127.0.0.1
@@ -84,3 +111,16 @@ W lokalnym demo listener musi być związany z127.0.0.1: `npm run dev --workspac
 OAuth Google jest opcjonalny: ustaw oba OAUTH_GOOGLE_CLIENT_ID/OAUTH_GOOGLE_CLIENT_SECRET i callback `{APP_URL}/api/auth/callback/google`. Bez pary konfiguracja jest błędna; bez obu UI nie pokazuje przycisku. `/api/v1/config` ujawnia wyłącznie boolean dostępności, nigdy klucze. Brak kont dostawcy oznacza brak rzeczywistego testu OAuth.
 
 CSP jest bazowy: object-src none, base-uri self, frame-ancestors none, form-action self oraz źródła aplikacji; Next inline hydration wymaga w tym wariancie script-src unsafe-inline. Nie jest to ścisły CSP z nonce. Development dodatkowo dopuszcza eval/WebSocket wymagane przez narzędzia. Produkcyjny hosting HTTPS może dodać nonce i HSTS po testach; nie włączamy upgrade-insecure-requests podczas buildu bez środowiska, aby nie psuć lokalnego demo HTTP.
+
+## Stan instalacji demo
+
+Migracja Migration202611040001 dodaje demo_seed_state; nie zmienia poprzednich
+migracji. Seed blokuje swój wiersz i zapisuje ukończenie w transakcji danych
+domeny. W razie błędu domena i znacznik są wycofywane, a wcześniej utworzone
+konta auth są bezpiecznie wykorzystywane przy ponowieniu. Istniejące dane
+sprzed instalatora są uzupełniane bez nadpisywania ról i celów.
+Nie usuwaj znacznika w celu codziennego odświeżania terminów.
+
+Przy wdrażaniu tej wersji uruchom npm run migrate przed seed:demo.
+Rollback kodu nie wymaga usuwania tabeli stanu. Destrukcyjne wycofanie migracji
+nie jest krokiem naprawczym instalatora; zachowaj bazę i zastosuj poprawkę do przodu.

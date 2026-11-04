@@ -87,6 +87,8 @@ export default defineConfig([
     },
   },
   globalIgnores([
+    // Installed skills contain templates, not application source.
+    ".agents/skills/**",
     "**/node_modules/**",
     "**/.next/**",
     "**/out/**",

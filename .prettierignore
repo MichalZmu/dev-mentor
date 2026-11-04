@@ -11,3 +11,6 @@ docs/
 AGENTS.md
 CLAUDE.md
 README.md
+
+# Installed agent-skill distribution includes unexpanded code templates.
+.agents/skills/

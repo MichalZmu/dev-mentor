@@ -321,7 +321,18 @@ export const PayoutsSchema = defineEntity({
   }),
 });
 
+export const DemoSeedStateSchema = defineEntity({
+  name: "DemoSeedStateSchema",
+  tableName: "demo_seed_state",
+  properties: (p) => ({
+    id: p.text().primary(),
+    started_at: p.datetime().columnType("timestamptz"),
+    completed_at: p.datetime().columnType("timestamptz").nullable(),
+  }),
+});
+
 export const domainEntities = [
+  DemoSeedStateSchema,
   DomainUsersSchema,
   MentorProfilesSchema,
   AvailabilitySlotsSchema,
@@ -346,6 +357,7 @@ export const domainEntities = [
   PayoutsSchema,
 ];
 export const domainTableNames = [
+  "demo_seed_state",
   "domain_users",
   "mentor_profiles",
   "availability_slots",

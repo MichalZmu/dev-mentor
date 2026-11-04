@@ -4,6 +4,7 @@ import { createDatabaseConfig } from "../src/config";
 import { Migration202611030001 } from "../migrations/Migration202611030001";
 import { Migration202611030002 } from "../migrations/Migration202611030002";
 import { Migration202611030003 } from "../migrations/Migration202611030003";
+import { Migration202611040001 } from "../migrations/Migration202611040001";
 import { Migration202611030004 } from "../migrations/Migration202611030004";
 
 test("domain schema declares booking exclusion, durable deduplication and append-only audit", async () => {
@@ -44,6 +45,11 @@ test("incremental migrations add reversible audit context and availability prove
         Migration202611030002,
         "add column request_id",
         "drop column request_id",
+      ],
+      [
+        Migration202611040001,
+        "create table demo_seed_state",
+        "drop table demo_seed_state",
       ],
       [Migration202611030003, "add column source", "drop column source"],
       [

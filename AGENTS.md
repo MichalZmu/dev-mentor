@@ -35,6 +35,7 @@ Projekt jest monorepo npm workspaces. Wszystkie pakiety znajdują się w `packag
 - Konfigurację lokalną przechowuj w root `.env`, korzystając z `.env.example`. Ładowanie pliku środowiska należy do konfiguracji Next.js i wejść CLI, a moduły `db` używane przez aplikację czytają `process.env`. Nie dodawaj plików `.env` do bundla przez statyczne `new URL(..., import.meta.url)`.
 - Schematy encji rejestruj jawnie w `packages/db/src/config.ts`; używaj API MikroORM zgodnego z bundlerem (np. `defineEntity`). Migracje uruchamiaj jawnie przez CLI, nie automatycznie podczas startu aplikacji.
 - Kontenery i scope w kodzie Next.js importuj przez `packages/app/server/services.ts`. Serwerowy projekt Vitest używa warunku `react-server` w resolverach Vite/SSR oraz inliningu rzeczywistego pakietu `server-only`, aby respektować jego publiczne eksporty bez mockowania granicy. Osobny projekt komponentów React działa w jsdom bez warunku `react-server`.
+- Zainstalowana dystrybucja `.agents/skills/` zawiera także niewypełnione szablony kodu i nie należy do źródeł aplikacji. Prettier i ESLint pomijają wyłącznie ten katalog; kod pakietów, narzędzia projektu i testy pozostają objęte kontrolami.
 - Komponenty shadcn/ui dodawaj z root: `npm run ui:add -- <nazwa>`. Konfiguracje `components.json` muszą kierować wspólne komponenty do `packages/ui`.
 
 ### Egzekwowanie standardów inżynieryjnych

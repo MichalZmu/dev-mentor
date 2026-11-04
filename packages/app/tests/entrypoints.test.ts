@@ -68,6 +68,7 @@ beforeEach(() => {
   mocks.migrations.mockResolvedValue({ runMigrations: mocks.runMigrations });
   mocks.password.mockResolvedValue("hash");
   mocks.uuid.mockReturnValue("generated-id");
+  mocks.seed.mockResolvedValue({ seeded: true });
   mocks.get.mockResolvedValue("orm");
   mocks.entityManager.mockImplementation(
     (_orm: unknown, callback: (em: unknown) => unknown) => callback("em"),
@@ -236,4 +237,14 @@ test("Next instrumentation only starts server telemetry in node runtime", async 
   vi.stubEnv("NEXT_RUNTIME", "nodejs");
   await register();
   expect(mocks.telemetry).toHaveBeenCalledOnce();
+});
+
+test("completed demo seed reports its skip to the setup orchestrator", async () => {
+  mocks.query.mockResolvedValue({ rows: [{ id: "existing" }] });
+  mocks.seed.mockResolvedValueOnce({ seeded: false });
+  await import("../scripts/seed-demo");
+  expect(console.log).toHaveBeenCalledWith(
+    expect.stringContaining("DEMO_SEED_SKIPPED"),
+  );
+  expect(mocks.password).not.toHaveBeenCalled();
 });

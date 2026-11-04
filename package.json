@@ -39,7 +39,8 @@
     "seed:demo": "tsx --conditions=react-server packages/app/scripts/seed-demo.ts",
     "test:e2e:docker": "tsx scripts/e2e.ts --docker",
     "test:app": "node --conditions=react-server --import tsx tests/support/serve-app.ts",
-    "test:browser:install": "node node_modules/agent-browser/scripts/postinstall.js && agent-browser install --with-deps"
+    "test:browser:install": "node node_modules/agent-browser/scripts/postinstall.js && agent-browser install --with-deps",
+    "setup": "node scripts/setup.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
