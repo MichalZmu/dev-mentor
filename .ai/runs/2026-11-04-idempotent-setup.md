@@ -5,7 +5,7 @@ Cele:
 - Zweryfikować bootstrap i ponowienia na izolowanej bazie, naprawić zatwierdzone blokady bramki i opublikować PR po pełnej walidacji.
 
 Specyfikacja: [Idempotent setup](../specs/implemented/2026-11-04-idempotent-setup.md)
-Status: in-progress
+Status: done
 
 ## Wpisy
 
@@ -48,3 +48,8 @@ Do zrobienia: regresja fail-before-fix, minimalny probe runtime w osobnym proces
 Zakres: ograniczony probe modułów CLI przed pominięciem instalacji i po npm ci; regresje jednostkowe oraz realne naprawy dotenv/pg; integracyjny down/up migracji z zachowaniem danych, dokumentacja i lessons.
 Decyzje / pułapki: trzy regresje zawiodły przed poprawką; historię migracji odczytujemy z SQL zgodnie z zainstalowanym API. Po przejściowym DNS ponowiono instalator i kolejne kroki w kolejności; pełna bramka11/11PASS:438unit/coverage,56integracji,6E2E.
 Do zrobienia: wypchnąć poprawki do istniejącego PR#2 i zaktualizować opis/dowody; wymagane pozostają review i QA przed merge.
+
+### 2026-11-04 — publikacja poprawek review
+Zakres: commit5203d6b wypchnięto do PR#2; opis i istniejące podsumowanie zaktualizowano o probe runtime, rzeczywisty down/up i dowody438unit/56integracji/6E2E.
+Decyzje / pułapki: oba ustalenia review mają regresje; pełna lokalna bramka11/11PASS, CI nowego head i niezależne review/QA pozostają osobnymi sygnałami.
+Do zrobienia: brak w zakresie zatwierdzonych poprawek i ich publikacji; zwolnienie własnej blokady PR kończy ten run. Nie nadano approval ani qa-approved.
