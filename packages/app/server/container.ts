@@ -1,8 +1,18 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { asFunction, asValue, createContainer, InjectionMode, type AwilixContainer } from "awilix";
-import { applicationInfo, type ApplicationInfo, type RequestMetadata } from "@devmentor/core";
+import {
+  asFunction,
+  asValue,
+  createContainer,
+  InjectionMode,
+  type AwilixContainer,
+} from "awilix";
+import {
+  applicationInfo,
+  type ApplicationInfo,
+  type RequestMetadata,
+} from "@devmentor/core";
 import type { DatabaseProvider, EntityManager } from "@devmentor/db";
 
 export interface AppServices {
@@ -15,7 +25,9 @@ export interface DatabaseServices extends AppServices {
   entityManager: EntityManager;
 }
 
-export function createAppContainer(database: DatabaseProvider): AwilixContainer<AppServices> {
+export function createAppContainer(
+  database: DatabaseProvider,
+): AwilixContainer<AppServices> {
   const container = createContainer<AppServices>({
     injectionMode: InjectionMode.PROXY,
     strict: true,
@@ -37,7 +49,9 @@ export async function runInRequestScope<TServices extends AppServices, T>(
   scope.register({
     // Generate an identifier only if a caller uses request metadata.
     // Pure application-info reads remain safe during Next.js prerendering.
-    request: asFunction(() => Object.freeze(request ? { ...request } : { id: randomUUID() })).scoped(),
+    request: asFunction(() =>
+      Object.freeze(request ? { ...request } : { id: randomUUID() }),
+    ).scoped(),
   });
   try {
     return await callback(scope.cradle);

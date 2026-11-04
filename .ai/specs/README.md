@@ -1,3 +1,5 @@
+
+
 # Specyfikacje SDD
 
 Nowe specyfikacje zapisuj tutaj jako `YYYY-MM-DD-slug.md`. Data oznacza dzień utworzenia; zachowuj nazwę przez cały cykl życia dokumentu.

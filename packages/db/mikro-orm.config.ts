@@ -8,6 +8,8 @@ export default defineConfig({
   ...createDatabaseConfig(),
   extensions: [Migrator],
   migrations: {
+    // SQL-owned migrations do not generate filesystem schema snapshots.
+    snapshot: false,
     path: fileURLToPath(new URL("./migrations", import.meta.url)),
     emit: "ts",
   },

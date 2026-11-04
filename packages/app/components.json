@@ -15,6 +15,6 @@
     "utils": "@devmentor/ui/lib/utils",
     "ui": "@devmentor/ui/components",
     "lib": "@/lib",
-    "hooks": "@/hooks"
+    "hooks": "@devmentor/ui/hooks"
   }
 }

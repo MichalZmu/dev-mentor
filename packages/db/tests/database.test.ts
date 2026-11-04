@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { setTimeout } from "node:timers/promises";
-import test from "node:test";
+import { test } from "vitest";
 import { MikroORM, RequestContext } from "@mikro-orm/postgresql";
 import { createDatabaseConfig } from "../src/config";
 import { createDatabaseProvider, withEntityManager } from "../src/runtime";
@@ -9,11 +9,26 @@ const env = { DATABASE_URL: "postgresql://devmentor@127.0.0.1:1/unused" };
 
 test("invalid database and pool settings fail before any database connection", () => {
   assert.throws(() => createDatabaseConfig({}), /DATABASE_URL is required/);
-  assert.throws(() => createDatabaseConfig({ DATABASE_URL: "not-a-url" }), /valid PostgreSQL URL/);
-  assert.throws(() => createDatabaseConfig({ DATABASE_URL: "https://example.com/db" }), /must specify PostgreSQL/);
-  assert.throws(() => createDatabaseConfig({ ...env, DB_POOL_MAX: "0" }), /Pool configuration/);
-  assert.throws(() => createDatabaseConfig({ ...env, DB_POOL_MIN: "5", DB_POOL_MAX: "2" }), /Pool configuration/);
-  assert.throws(() => createDatabaseConfig({ ...env, DB_POOL_MAX: "2.5" }), /non-negative integer/);
+  assert.throws(
+    () => createDatabaseConfig({ DATABASE_URL: "not-a-url" }),
+    /valid PostgreSQL URL/,
+  );
+  assert.throws(
+    () => createDatabaseConfig({ DATABASE_URL: "https://example.com/db" }),
+    /must specify PostgreSQL/,
+  );
+  assert.throws(
+    () => createDatabaseConfig({ ...env, DB_POOL_MAX: "0" }),
+    /Pool configuration/,
+  );
+  assert.throws(
+    () => createDatabaseConfig({ ...env, DB_POOL_MIN: "5", DB_POOL_MAX: "2" }),
+    /Pool configuration/,
+  );
+  assert.throws(
+    () => createDatabaseConfig({ ...env, DB_POOL_MAX: "2.5" }),
+    /non-negative integer/,
+  );
 });
 
 test("concurrent calls initialize one ORM; shutdown permits a fresh instance", async () => {
@@ -55,20 +70,25 @@ test("parallel request contexts use separate EntityManagers and survive an async
   const orm = new MikroORM(createDatabaseConfig(env));
   const managers = new Set();
   try {
-    await Promise.all([1, 2].map((delay) =>
-      withEntityManager(orm, async (em) => {
-        managers.add(em);
-        assert.notEqual(em, orm.em);
-        await setTimeout(delay);
-        assert.equal(RequestContext.getEntityManager(), em);
-        assert.equal(orm.em.getContext(), em);
-      }),
-    ));
+    await Promise.all(
+      [1, 2].map((delay) =>
+        withEntityManager(orm, async (em) => {
+          managers.add(em);
+          assert.notEqual(em, orm.em);
+          await setTimeout(delay);
+          assert.equal(RequestContext.getEntityManager(), em);
+          assert.equal(orm.em.getContext(), em);
+        }),
+      ),
+    );
     assert.equal(managers.size, 2);
     assert.equal(RequestContext.getEntityManager(), undefined);
-    await assert.rejects(withEntityManager(orm, async () => {
-      throw new Error("request failed");
-    }), /request failed/);
+    await assert.rejects(
+      withEntityManager(orm, async () => {
+        throw new Error("request failed");
+      }),
+      /request failed/,
+    );
     assert.equal(RequestContext.getEntityManager(), undefined);
   } finally {
     await orm.close();
@@ -77,9 +97,13 @@ test("parallel request contexts use separate EntityManagers and survive an async
 
 test("get waits for an ongoing close and initializes exactly one replacement ORM", async () => {
   let releaseClose!: () => void;
-  const closeGate = new Promise<void>((resolve) => { releaseClose = resolve; });
+  const closeGate = new Promise<void>((resolve) => {
+    releaseClose = resolve;
+  });
   let notifyCloseStarted!: () => void;
-  const closeStarted = new Promise<void>((resolve) => { notifyCloseStarted = resolve; });
+  const closeStarted = new Promise<void>((resolve) => {
+    notifyCloseStarted = resolve;
+  });
   let calls = 0;
   let closeCalls = 0;
   const first = new MikroORM(createDatabaseConfig(env));
@@ -100,7 +124,10 @@ test("get waits for an ongoing close and initializes exactly one replacement ORM
     assert.equal(provider.close(), closing);
     await closeStarted;
     let resolved = false;
-    const replacement = provider.get().then((orm) => { resolved = true; return orm; });
+    const replacement = provider.get().then((orm) => {
+      resolved = true;
+      return orm;
+    });
     await setTimeout(1);
     assert.equal(resolved, false);
     assert.equal(calls, 1);

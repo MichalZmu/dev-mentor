@@ -22,19 +22,32 @@ Projekt jest monorepo npm workspaces. Wszystkie pakiety znajdują się w `packag
 | `packages/db` | PostgreSQL i MikroORM: encje, repozytoria, migracje, konfiguracja i pula połączeń. |
 | `packages/ui` | Współdzielone komponenty React, style Tailwind i komponenty shadcn/ui. |
 
-- Zachowuj kierunek zależności: `app → core/db/ui`, `db → core`, `ui → core` tylko dla wspólnych typów i narzędzi przydatnych w UI. `core` nie zależy od pozostałych pakietów; unikaj cykli i importów wewnętrznych plików innego pakietu.
+- Zachowuj kierunek zależności: `app → core/db/ui`, `db → core`, `ui` nie importuje żadnego innego pakietu projektu (także typów z `core`). `core` nie zależy od pozostałych pakietów; unikaj cykli i importów wewnętrznych plików innego pakietu.
 - Dostęp do bazy i kontener Awilix utrzymuj po stronie serwera. Rejestruj zależności w serwerowej części `app`, a do usług przekazuj je jawnie; nie pobieraj kontenera globalnie wewnątrz logiki biznesowej.
 - W `db` utrzymuj współdzieloną pulę połączeń oraz izolowany kontekst EntityManager dla każdego żądania lub zadania. Nie współdziel stanu żądania między singletonami Awilix.
 - Zmiany schematu bazy opisuj wersjonowanymi migracjami MikroORM w `db`. Komponenty UI nie importują `db`, kontenera DI ani sekretów; przekazuj im dane przez jawne kontrakty.
 - Wspólne komponenty utrzymuj w `ui`, a widoki specyficzne dla aplikacji w `app`. Tailwind służy do stylowania, a shadcn/ui dostarcza komponenty panelu administracyjnego. Granicę komponentów klienta wyznaczaj zgodnie z lokalną dokumentacją Next.js.
+- Po zmianie struktury pakietów, ich odpowiedzialności lub stosu uaktualnij opis architektury w `README.md` i odpowiednie reguły w `AGENTS.md`. Sprawdź zgodność opisu z manifestami, publicznymi eksportami i rzeczywistymi importami; wersje zapisuj w manifestach i jednym root lockfile.
 
 ### Konfiguracja i kontrole
 
-- Wymagany jest Node.js >=22.17 (MikroORM 7); wersja środowiska developerskiego jest w `.nvmrc`. Używaj `npm ci`, `npm run lint`, `npm run typecheck`, `npm test` i `npm run build` z root.
+- Wymagany jest Node.js 26.13.0 i npm 11.20.0; wersje są przypięte w `.nvmrc` i root `package.json`. Używaj wyłącznie npm i jednego `package-lock.json`. Z root uruchamiaj `npm ci`, `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run deps:check`, `npm run test:coverage`, `npm run test:integration`, `npm run build`, `npm run test:e2e` i `npm run security:check`.
 - Konfigurację lokalną przechowuj w root `.env`, korzystając z `.env.example`. Ładowanie pliku środowiska należy do konfiguracji Next.js i wejść CLI, a moduły `db` używane przez aplikację czytają `process.env`. Nie dodawaj plików `.env` do bundla przez statyczne `new URL(..., import.meta.url)`.
 - Schematy encji rejestruj jawnie w `packages/db/src/config.ts`; używaj API MikroORM zgodnego z bundlerem (np. `defineEntity`). Migracje uruchamiaj jawnie przez CLI, nie automatycznie podczas startu aplikacji.
-- Kontenery i scope w kodzie Next.js importuj przez `packages/app/server/services.ts`. Testy integracji serwerowych modułów uruchamiane przez `npm test` używają warunku `react-server`, aby respektować `server-only`.
+- Kontenery i scope w kodzie Next.js importuj przez `packages/app/server/services.ts`. Serwerowy projekt Vitest używa warunku `react-server` w resolverach Vite/SSR oraz inliningu rzeczywistego pakietu `server-only`, aby respektować jego publiczne eksporty bez mockowania granicy. Osobny projekt komponentów React działa w jsdom bez warunku `react-server`.
 - Komponenty shadcn/ui dodawaj z root: `npm run ui:add -- <nazwa>`. Konfiguracje `components.json` muszą kierować wspólne komponenty do `packages/ui`.
+
+### Egzekwowanie standardów inżynieryjnych
+
+- TypeScript: `strict`, `noUncheckedIndexedAccess` i `exactOptionalPropertyTypes`. Dane z zewnątrz mają typ `unknown` i walidację runtime; konfigurację PostgreSQL waliduje Zod przed utworzeniem puli.
+- Kod i kontrakty po angielsku; zwykłe pliki `kebab-case`. Publiczne funkcje i porty mają jawne wyniki. ESLint blokuje nieobsłużone Promise, nieprawidłowe importy typów, `any` i non-null assertion. Wyłączenie reguły wymaga lokalnego uzasadnienia.
+- `npm run deps:check` kontroluje deklaracje zależności, importy/reeksporty (również typów, `require` i literalne dynamiczne importy), eksporty publiczne i cykle. Import względny nie może przekraczać pakietu; alias nie może używać `..`. W `ui` dane przepływają wyłącznie przez props.
+- Każda nowa funkcja musi mieć 100% pokrycia testami jednostkowymi: lines, branches, functions i statements. Dotyczy to wszystkich pakietów (`app`, `core`, `db`, `ui`) oraz narzędzi projektu, a także zmian istniejących funkcji; testy integracyjne i E2E nie zastępują testów jednostkowych. `npm run test:coverage` obejmuje wszystkie pliki implementacji (również nieimportowane) i egzekwuje 100% każdej metryki dla każdego pliku. Nowe przypadki użycia należą do `core`. Wyłączone są wyłącznie deklaracje `.d.ts`; nie dodawaj wyjątków, ignorowania coverage ani obniżenia progów dla ominięcia tej zasady.
+- `npm run test:integration` wymaga wcześniejszego `npm run build`, instalacji przeglądarki (`npm run test:browser:install`) i działającego Dockera i tworzy własny PostgreSQL 18.6 przez Testcontainers. Brak infrastruktury jest błędem, nie powodem pominięcia testu. Nie uruchamiaj testów destrukcyjnych na bazie użytkownika.
+- `npm run test:e2e` wymaga wcześniejszego produkcyjnego buildu i Chromium (`npx --no-install playwright install --with-deps chromium`). Testy uruchamiają własny serwer na porcie 3100, sprawdzają desktop/mobile i klawiaturę; zachowują trace po błędzie.
+- Logi JSON: UTC, requestId, operacja i bezpieczny kod. Nie przekazuj do loggera sterownika, SQL, tokenów ani prywatnych danych. `db:check` używa allowlisty pól zamiast serializacji wyjątku.
+- CI ma minimalne uprawnienia, pełne SHA Actions i `ci-required`, który wymaga sukcesu wszystkich zależności. Niezaufane PR nie otrzymują sekretów wdrożeniowych. Review i `ci-required` muszą zostać wymagane w ustawieniach GitHub; sam workflow nie tworzy ochrony gałęzi.
+- `npm run security:check` blokuje każdą podatność runtime oraz nowe advisory narzędzi. Czasowe wyjątki tylko dev opisuje `security-exceptions.json`: ścisłe GHSA, właściciel, uzasadnienie i termin; po terminie kontrola musi zawieść. Nie stosuj ogólnego podnoszenia progu severity ani `--force`.
 
 ## Obowiązkowy workflow AI
 

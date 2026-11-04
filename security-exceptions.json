@@ -1,0 +1,20 @@
+[
+  {
+    "id": "GHSA-g3hv-75wg-m249",
+    "owner": "MichalZmu",
+    "reason": "Development tools depend on older minimatch APIs; major 11 replacement is not API-compatible. Inputs are repository-controlled; CI has no deployment secrets.",
+    "expires": "2026-11-17"
+  },
+  {
+    "id": "GHSA-3g3m-2fjr-6pw4",
+    "owner": "MichalZmu",
+    "reason": "Development-only glob dependency; no forced major override across consumers. No glob CLI invocation with untrusted shell input; isolated CI without deployment secrets.",
+    "expires": "2026-11-17"
+  },
+  {
+    "id": "GHSA-gcqx-w48m-w2h4",
+    "owner": "MichalZmu",
+    "reason": "Development-only shadcn registry transitive deepmerge; no safe upstream patch selected. Review generated components and do not import this tool into runtime.",
+    "expires": "2026-11-17"
+  }
+]

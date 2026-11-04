@@ -1,0 +1,616 @@
+{
+  "date": "2026-11-03",
+  "prototypeTypecheck": "pass",
+  "repo": {
+    "lint": "pass",
+    "typecheck": "pass",
+    "tests": {
+      "passed": 8,
+      "failed": 0
+    },
+    "build": "pass"
+  },
+  "browser": {
+    "renderedScreens": 25,
+    "statesChecked": 100,
+    "errors": 0,
+    "desktopViewport": [
+      1440,
+      1000
+    ],
+    "mobileViewport": [
+      390,
+      844
+    ],
+    "horizontalOverflowScreens": 0,
+    "keyboardSkipLink": "pass",
+    "dialogEscape": "pass",
+    "fileProtocol": "blocked-by-browser-policy"
+  },
+  "screens": [
+    {
+      "id": "S01",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S02",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S03",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S04",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S05",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S06",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S07",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S08",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S09",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S10",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S11",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S12",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S13",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S14",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S15",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S16",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S17",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S18",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S19",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S20",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S21",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S22",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S23",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S24",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    },
+    {
+      "id": "S25",
+      "render": "pass",
+      "states": [
+        {
+          "state": "loading",
+          "result": "pass"
+        },
+        {
+          "state": "empty",
+          "result": "pass"
+        },
+        {
+          "state": "error",
+          "result": "pass"
+        },
+        {
+          "state": "success",
+          "result": "pass"
+        }
+      ],
+      "mobileOverflow": false
+    }
+  ],
+  "limitations": [
+    "No production backend integrations",
+    "Direct file:// opening requires recipient confirmation",
+    "No full accessibility audit"
+  ],
+  "archiveVerification": {
+    "result": "pass",
+    "method": "Each ZIP entry decompressed and compared by SHA-256 with source file; verification repeated after final packaging"
+  }
+}

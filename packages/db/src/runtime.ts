@@ -1,4 +1,8 @@
-import { MikroORM, RequestContext, type EntityManager } from "@mikro-orm/postgresql";
+import {
+  MikroORM,
+  RequestContext,
+  type EntityManager,
+} from "@mikro-orm/postgresql";
 import { createDatabaseConfig } from "./config";
 
 export type Database = Awaited<ReturnType<typeof MikroORM.init>>;
@@ -10,7 +14,8 @@ export interface DatabaseProvider {
 
 /** Coalesces concurrent initialization, permits retries, and serializes shutdown. */
 export function createDatabaseProvider(
-  initialize: () => Promise<Database> = () => MikroORM.init(createDatabaseConfig()),
+  initialize: () => Promise<Database> = () =>
+    MikroORM.init(createDatabaseConfig()),
 ): DatabaseProvider {
   let pending: Promise<Database> | undefined;
   let closing: Promise<void> | undefined;
@@ -21,7 +26,7 @@ export function createDatabaseProvider(
       const attempt = Promise.resolve().then(initialize);
       pending = attempt;
       void attempt.catch(() => {
-        if (pending === attempt) pending = undefined;
+        pending = undefined;
       });
     }
     return pending;
@@ -31,13 +36,15 @@ export function createDatabaseProvider(
     if (closing) return closing;
     if (!pending) return Promise.resolve();
     const current = pending;
-    closing = current.then(
-      (orm) => orm.close(),
-      () => undefined,
-    ).finally(() => {
-      pending = undefined;
-      closing = undefined;
-    });
+    closing = current
+      .then(
+        (orm) => orm.close(),
+        () => undefined,
+      )
+      .finally(() => {
+        pending = undefined;
+        closing = undefined;
+      });
     return closing;
   }
 
@@ -49,11 +56,14 @@ export function withEntityManager<T>(
   orm: Database,
   callback: (entityManager: EntityManager) => T,
 ): T {
-  return RequestContext.create(orm.em, () => callback(orm.em.getContext() as EntityManager));
+  return RequestContext.create(orm.em, () =>
+    callback(orm.em.getContext() as EntityManager),
+  );
 }
 
 // Keep a single provider per Node process, including Next.js development reloads.
 const processState = globalThis as typeof globalThis & {
   devmentorDatabase?: DatabaseProvider;
 };
-export const database = processState.devmentorDatabase ??= createDatabaseProvider();
+export const database = (processState.devmentorDatabase ??=
+  createDatabaseProvider());

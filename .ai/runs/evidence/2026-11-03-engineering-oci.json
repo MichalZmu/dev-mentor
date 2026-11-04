@@ -1,0 +1,92 @@
+{
+  "image": "devmentor:engineering-final",
+  "checks": [
+    {
+      "command": "npm run migrate",
+      "exit": 0
+    },
+    {
+      "command": "npm run migrate",
+      "exit": 0
+    },
+    {
+      "command": "npm run seed:demo",
+      "exit": 0
+    },
+    {
+      "command": "runtime uid",
+      "uid": 1000
+    },
+    {
+      "path": "/api/v1/health",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/config",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/mentors",
+      "status": 200
+    },
+    {
+      "path": "/mentors",
+      "status": 200
+    },
+    {
+      "command": "register",
+      "status": 201,
+      "targetHost": "localhost"
+    },
+    {
+      "command": "mailbox",
+      "status": 200
+    },
+    {
+      "command": "verification message",
+      "count": 1,
+      "found": true
+    },
+    {
+      "command": "verify-email",
+      "status": 302
+    },
+    {
+      "command": "foreign host rejection",
+      "status": 404
+    },
+    {
+      "command": "newly verified login",
+      "status": 200
+    },
+    {
+      "command": "registration/mailbox/verification/login via OCI plus foreign-host denial",
+      "status": 200,
+      "foreignHost": 404
+    },
+    {
+      "command": "auth login/session realPG",
+      "status": 200
+    },
+    {
+      "command": "worker --once same image",
+      "exit": 0
+    }
+  ],
+  "imageId": "sha256:4434515e581de589c1617253822824c294b4ebde8c9ffc33e54144c32e5a5f94",
+  "result": "PASS",
+  "source_state_sha256": "752a07f91044dc020e3d81b4f792d0505acc57d9dac5807f1634a0b1ea571dd7",
+  "source_mismatches_after": [],
+  "build_result": "PASS",
+  "build_log": "/tmp/devmentor-final-oci-build.log",
+  "smoke_log": "/tmp/devmentor-final-oci-smoke.log",
+  "cleanup": "Dedicated PostgreSQL, web container and Docker network stopped in finally; no user database used.",
+  "harness_correction": "Node26fetch ignores overridden Host. Echo-server control confirmed actual wire header. Foreign-host negative probe uses native http.request and observed404; earlier harness failures are retained separately. No source changes were needed.",
+  "current_source_state_sha256": "301e2d228e694de0439998103559202a7b359100be66ac8743536ec1cca24786",
+  "delta_after_build": [
+    "README.md",
+    "tests/e2e/product-booking.spec.ts"
+  ],
+  "carry_forward_basis": "After the OCI build and complete smoke test, only README command ordering and the E2E persistence assertion changed. All product code, styles, configuration, dependencies and runtime inputs are byte-identical to the built source. These changes do not alter the image or invalidate its runtime evidence.",
+  "current_manifest_mismatches": []
+}

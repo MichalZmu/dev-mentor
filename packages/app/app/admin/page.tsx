@@ -1,18 +1,26 @@
-import Link from "next/link";
-import { Button } from "@devmentor/ui/components/button";
-
-export default function AdminPreview() {
+import { Suspense } from "react";
+import type { JSX } from "react";
+import { AdminWorkspace } from "@/components/admin-workspace";
+export default function AdminPage(): JSX.Element {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-6 px-6 py-16">
-      <p className="text-sm font-medium text-muted-foreground">DevMentor</p>
-      <h1 className="text-3xl font-semibold tracking-tight">Panel administracyjny</h1>
-      <p className="text-muted-foreground">
-        Podgląd interfejsu. Funkcje administracyjne będą dostępne po wdrożeniu logowania i uprawnień.
-      </p>
-      <div className="flex flex-wrap gap-3">
-        <Button asChild><Link href="/">Wróć do strony głównej</Link></Button>
-        <Button variant="outline" disabled>Wkrótce</Button>
-      </div>
+    <main id="main" tabIndex={-1} className="shell content-wrap">
+      <header className="page-heading">
+        <p className="eyebrow">JAKOŚĆ I BEZPIECZEŃSTWO WSPÓŁPRACY</p>
+        <h1>Panel administracyjny</h1>
+        <p>
+          Weryfikacja mentorów, pomoc uczestnikom i historia uzasadnionych
+          decyzji.
+        </p>
+      </header>
+      <Suspense
+        fallback={
+          <p role="status" className="notice">
+            Wczytywanie kolejek…
+          </p>
+        }
+      >
+        <AdminWorkspace />
+      </Suspense>
     </main>
   );
 }

@@ -2,12 +2,19 @@ import "server-only";
 
 import { asValue } from "awilix";
 import { database, withEntityManager } from "@devmentor/db";
-import { createAppContainer, runInRequestScope, type AppServices, type DatabaseServices } from "./container";
+import {
+  createAppContainer,
+  runInRequestScope,
+  type AppServices,
+  type DatabaseServices,
+} from "./container";
 
 const container = createAppContainer(database);
 
 /** Services which do not query PostgreSQL can run without a database connection. */
-export function withAppServices<T>(callback: (services: AppServices) => T | Promise<T>): Promise<T> {
+export function withAppServices<T>(
+  callback: (services: AppServices) => T | Promise<T>,
+): Promise<T> {
   return runInRequestScope(container, callback);
 }
 

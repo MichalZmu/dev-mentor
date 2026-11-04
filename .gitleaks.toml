@@ -1,0 +1,14 @@
+title = "DevMentor secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "File SHA256 entries in the three reviewed verification manifests"
+condition = "AND"
+regexTarget = "line"
+paths = ['''^(?:/repo/)?\.ai/runs/evidence/2026-11-03-(?:github-ci-coverage|engineering-standards-r1|engineering-final)\.json$''']
+regexes = ['''^(?:\r?\n)?[ \t]*"(?:docs|packages|tests)/(?:[A-Za-z0-9_.@()\[\]-]+/)*[A-Za-z0-9_.@()\[\]-]+\.(?:ts|tsx|json|md)"[ \t]*:[ \t]*"[0-9a-f]{64}",?[ \t]*\r?$''']

@@ -1,0 +1,38 @@
+[
+  {
+    "original": ".snapshot-app_integration.json",
+    "preserved": "/tmp/devmentor-engineering-migrator-snapshots-r1/.snapshot-app_integration.json",
+    "sha256": "eb9f3c4318fa151e99f89031f1af6758028dca6b2f5f37faff7e91c2ec2de03d",
+    "reason": "Derived MikroORM migration snapshot from isolated test DB, SQL-owned schema"
+  },
+  {
+    "original": ".snapshot-devmentor_browser_test.json",
+    "preserved": "/tmp/devmentor-engineering-migrator-snapshots-r1/.snapshot-devmentor_browser_test.json",
+    "sha256": "eb9f3c4318fa151e99f89031f1af6758028dca6b2f5f37faff7e91c2ec2de03d",
+    "reason": "Derived MikroORM migration snapshot from isolated test DB, SQL-owned schema"
+  },
+  {
+    "original": ".snapshot-domain_integration.json",
+    "preserved": "/tmp/devmentor-engineering-migrator-snapshots-r1/.snapshot-domain_integration.json",
+    "sha256": "6fe1e58af4ff4c4cd74b0acf825eff99db8e5cb8635c156418a5509d05f86e96",
+    "reason": "Derived MikroORM migration snapshot from isolated test DB, SQL-owned schema"
+  },
+  {
+    "original": ".snapshot-worker_v1.json",
+    "preserved": "/tmp/devmentor-engineering-migrator-snapshots-r1/.snapshot-worker_v1.json",
+    "sha256": "8dbb3b410c65b8f94bd0cdebf6e5b00cda03bb48c5a122773211e9c1b20fe074",
+    "reason": "Derived MikroORM migration snapshot from isolated test DB, SQL-owned schema"
+  },
+  {
+    "original": "packages/db/migrations/.snapshot-devmentor_integration.json",
+    "preserved": "/tmp/devmentor-engineering-migrator-snapshots-r1/cli/.snapshot-devmentor_integration.json",
+    "sha256": "6fe1e58af4ff4c4cd74b0acf825eff99db8e5cb8635c156418a5509d05f86e96",
+    "reason": "Derived MikroORM CLI snapshot, SQL-owned migrations"
+  },
+  {
+    "original": ".snapshot-review_catalog.json",
+    "preserved": "/tmp/devmentor-engineering-migrator-snapshots-r1/review/.snapshot-review_catalog.json",
+    "sha256": "3072eb0329ee07a0ce5e8339f4a4ed008368a53c6a9f4d22e2119c9bb2d68939",
+    "reason": "Historical isolated review DB snapshot created before snapshot:false correction"
+  }
+]

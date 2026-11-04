@@ -1,0 +1,11 @@
+{
+  "source_state_sha256": "301e2d228e694de0439998103559202a7b359100be66ac8743536ec1cca24786",
+  "scanner": "Gitleaks 8.30.1",
+  "mode": "All tracked and untracked nonignored current files, including workflow evidence, copied to isolated snapshot; explicit repository configuration; redaction enabled.",
+  "exit_code": 0,
+  "configuration_sha256": "6347035d53816c542f7105d24e207447dbe726332b306ff0c475a95aa6439d47",
+  "report": "/tmp/devmentor-final-complete-gitleaks.log",
+  "negative_controls": "Independently checked: api_key in same manifest and other file, same hash outside allowed manifest, github-pat in same manifest remain detected.",
+  "final_source_mismatches": [],
+  "final_inventory_count": 213
+}

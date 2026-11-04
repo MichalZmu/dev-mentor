@@ -1,0 +1,39 @@
+# Merge explicitly with compose.yaml. Migrations remain an operator command.
+x-runtime: &runtime
+  image: devmentor:local
+  env_file: .env
+  environment: &runtime-env
+    APP_MODE: ${APP_MODE:-demo}
+    APP_URL: ${APP_URL:-http://localhost:3000}
+    DATABASE_URL: postgresql://${POSTGRES_USER:-devmentor}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-devmentor}
+    AUTH_DATABASE_URL: postgresql://${POSTGRES_USER:-devmentor}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-devmentor}
+    MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER:-devmentor}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-devmentor}
+    AUTH_MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER:-devmentor}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-devmentor}
+  depends_on:
+    postgres:
+      condition: service_healthy
+services:
+  web:
+    <<: *runtime
+    profiles: [app]
+    build: .
+    ports: ["127.0.0.1:3000:3000"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+  worker:
+    <<: *runtime
+    profiles: [app]
+    command: ["npm", "run", "worker"]
+  migrate:
+    <<: *runtime
+    profiles: [ops]
+    command: ["npm", "run", "migrate"]

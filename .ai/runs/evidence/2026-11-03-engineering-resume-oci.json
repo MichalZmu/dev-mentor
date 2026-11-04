@@ -1,0 +1,83 @@
+{
+  "image": "devmentor:engineering-resume",
+  "checks": [
+    {
+      "command": "npm run migrate",
+      "exit": 0
+    },
+    {
+      "command": "npm run migrate",
+      "exit": 0
+    },
+    {
+      "command": "npm run seed:demo",
+      "exit": 0
+    },
+    {
+      "command": "runtime uid",
+      "uid": 1000
+    },
+    {
+      "path": "/api/v1/health",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/config",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/mentors",
+      "status": 200
+    },
+    {
+      "path": "/mentors",
+      "status": 200
+    },
+    {
+      "command": "register",
+      "status": 201,
+      "targetHost": "localhost"
+    },
+    {
+      "command": "mailbox",
+      "status": 200
+    },
+    {
+      "command": "verification message",
+      "count": 1,
+      "found": true
+    },
+    {
+      "command": "verify-email",
+      "status": 302
+    },
+    {
+      "command": "foreign host rejection",
+      "status": 404
+    },
+    {
+      "command": "newly verified login",
+      "status": 200
+    },
+    {
+      "command": "registration/mailbox/verification/login via OCI plus foreign-host denial",
+      "status": 200,
+      "foreignHost": 404
+    },
+    {
+      "command": "auth login/session realPG",
+      "status": 200
+    },
+    {
+      "command": "worker --once same image",
+      "exit": 0
+    }
+  ],
+  "imageId": "sha256:257bd1a324a56365b5c0685c6a7fdddb9a2951531bc5551418ab255f1ad6b01e",
+  "result": "PASS",
+  "sourceSha256": "143e25b360b0a2260df4fbd4dcd6fb5c7f04c60cfd0bf0bfbbeeca1d10ccc244",
+  "sourceMismatchesAfter": [],
+  "build": "PASS",
+  "buildLog": "/tmp/devmentor-engineering-resume-oci-build.log",
+  "cleanup": "Dedicated Testcontainers PostgreSQL, web and network stopped in finally; no developer database used."
+}

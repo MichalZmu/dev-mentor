@@ -1,0 +1,643 @@
+"use strict";
+const mentors = [
+    { id: 'anna', name: 'Anna Kowalska', initials: 'AK', headline: 'Senior Frontend Engineer', topic: 'Frontend', price: 180, lang: 'PL / EN', rating: '4,9', count: 38, years: 9, tone: '', bio: 'Pomagam przejść od kursów do samodzielnej pracy nad produktem. Wspólnie przejrzymy Twój kod, uporządkujemy React i TypeScript oraz ułożymy plan dopasowany do Twojego celu.' },
+    { id: 'piotr', name: 'Piotr Nowak', initials: 'PN', headline: 'Staff Backend Engineer', topic: 'Backend', price: 220, lang: 'PL / EN', rating: '5,0', count: 24, years: 12, tone: 'sage', bio: 'Projektuję systemy, które rosną razem z produktem. Na sesjach pracujemy nad architekturą, API, bazami danych i świadomymi decyzjami technicznymi.' },
+    { id: 'maja', name: 'Maja Wiśniewska', initials: 'MW', headline: 'Engineering Manager', topic: 'Kariera', price: 200, lang: 'PL', rating: '4,9', count: 31, years: 10, tone: 'peach', bio: 'Zmiana roli, rozmowa techniczna albo pierwszy zespół? Pomogę Ci nazwać mocne strony i przygotować plan działania.' },
+    { id: 'tomasz', name: 'Tomasz Zieliński', initials: 'TZ', headline: 'Senior Data Scientist', topic: 'Data & AI', price: 240, lang: 'EN', rating: '4,8', count: 19, years: 8, tone: 'blue', bio: 'Od pierwszej analizy do modelu w produkcji. Zamienimy teorię w praktyczny projekt, z naciskiem na jakość danych i mierzalny efekt.' }
+];
+const seed = () => ({ role: 'mentee', logged: false, name: 'Alex', email: 'alex@example.test', timezone: 'Europe/Warsaw', goal: 'Pierwsza praca w IT', level: 'Początkujący', goalText: 'Chcę zbudować portfolio i przygotować się do pierwszej pracy jako frontend developer.', favorites: [], sessions: [], messages: {}, milestones: [true, false, false, false], subscription: 'none', renew: false, renewal: '2026-12-03', credits: 0, transactions: [], application: null, availability: ['0-0', '0-1', '1-2', '2-0', '3-0', '4-2'], payout: 1530, payoutPending: false, tickets: [], profileBio: mentors[0].bio, profileHeadline: mentors[0].headline, profilePrice: 180, notifications: true });
+let state = seed();
+try {
+    const stored = localStorage.getItem('devmentor-concept-v1');
+    if (stored)
+        state = { ...seed(), ...JSON.parse(stored) };
+}
+catch { /* memory fallback */ }
+let uiState = 'normal', search = '', topic = 'Wszystkie', budget = 500, language = 'Wszystkie', sort = 'recommended', onlyFavorites = false, sessionTab = 'scheduled', day = 0, slot = '', selectedMentor = 'anna', rescheduleId = '', continuation = 'booking', joined = false, mic = true, camera = true, authMode = 'login', currentCase = '', filterTimer = 0;
+const dates = ['2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14'], times = ['09:00', '10:00', '12:00', '14:00', '16:00', '18:00'];
+const app = document.querySelector('#app'), dialog = document.querySelector('#dialog');
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = (n) => new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', maximumFractionDigits: 0 }).format(n);
+const save = () => { try {
+    localStorage.setItem('devmentor-concept-v1', JSON.stringify(state));
+}
+catch { /* memory fallback */ } };
+function allMentors() { const base = mentors.map(m => m.id === 'anna' && !state.application ? { ...m, bio: state.profileBio, headline: state.profileHeadline, price: state.profilePrice } : m); return state.application?.status === 'approved' ? [...base, { id: 'candidate', name: state.application.name, initials: state.application.name.split(' ').map(s => s[0]).slice(0, 2).join(''), headline: state.profileHeadline, topic: state.application.topic, price: state.application.price, lang: 'PL', rating: 'Nowy', count: 0, years: state.application.years, tone: 'sage', bio: state.application.bio }] : base; }
+const mentor = () => allMentors().find(m => m.id === selectedMentor) || mentors[0];
+const route = () => location.hash.slice(1).split('?')[0] || 'home';
+const meta = () => SCREEN_META.find(s => s.route === route()) || SCREEN_META[0];
+const dateLabel = (iso, options = { dateStyle: 'long', timeStyle: 'short' }) => new Intl.DateTimeFormat('pl-PL', { ...options, timeZone: state.timezone }).format(new Date(iso));
+const slotISO = (d = day, t = slot) => dates[d] + 'T' + t + ':00+01:00';
+const sessionMentor = (s) => allMentors().find(m => m.id === s.mentorId) || mentors[0];
+function go(to) { uiState = 'normal'; if (location.hash === '#' + to) {
+    render();
+    window.scrollTo(0, 0);
+}
+else
+    location.hash = to; }
+function toast(text) { const el = document.querySelector('#toast'); el.textContent = text; el.classList.add('visible'); window.setTimeout(() => el.classList.remove('visible'), 4200); }
+function btn(text, to, style = '') { return `<a class="btn ${style}" href="#${to}">${text}</a>`; }
+function action(text, name, style = 'secondary', data = '') { return `<button class="btn ${style}" data-action="${name}" ${data}>${text}</button>`; }
+function badge(text, tone = 'good') { return `<span class="badge ${tone}">${esc(text)}</span>`; }
+function page(title, subtitle, body, extra = '') { return `<div class="crumb"><a href="#home">DevMentor</a><span>／</span><span>${meta().id} · ${esc(meta().title)}</span></div><div class="page-top"><div><p class="eyebrow">MENTORING, KTÓRY PROWADZI DALEJ</p><h1>${title}</h1><p class="subtitle">${subtitle}</p></div>${extra}</div>${body}`; }
+function openDialog(title, body) { dialog.innerHTML = `<button class="close" data-action="close-dialog" aria-label="Zamknij dialog">×</button><h2 id="dialog-title">${title}</h2>${body}`; dialog.showModal(); }
+function formError(form, text) { const el = form.querySelector('[data-error]'); if (el) {
+    el.textContent = text;
+    el.hidden = false;
+    el.focus();
+}
+else
+    toast(text); }
+const errorBox = () => '<p class="notice error" data-error role="alert" tabindex="-1" hidden></p>';
+function field(name, label, value = '', attrs = '', hint = '') { return `<div class="field"><label for="${name}">${label}</label><input id="${name}" name="${name}" value="${esc(value)}" ${attrs}>${hint ? `<small>${hint}</small>` : ''}</div>`; }
+function area(name, label, value = '', attrs = '') { return `<div class="field"><label for="${name}">${label}</label><textarea id="${name}" name="${name}" ${attrs}>${esc(value)}</textarea></div>`; }
+function select(name, label, values, value) { return `<div class="field"><label for="${name}">${label}</label><select id="${name}" name="${name}">${values.map(v => `<option ${v === value ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>`; }
+function mentorCard(m) { return `<article class="mentor-card"><div class="mentor-visual ${m.tone}"><span class="initials" aria-hidden="true">${esc(m.initials)}</span><span class="badge">✓ Zweryfikowany mentor</span><button class="favorite" aria-label="Ulubiony mentor: ${esc(m.name)}" aria-pressed="${state.favorites.includes(m.id)}" data-action="favorite" data-id="${m.id}">${state.favorites.includes(m.id) ? '♥' : '♡'}</button></div><div class="mentor-body"><div class="mentor-name"><h3><a href="#profile?mentor=${m.id}">${esc(m.name)}</a></h3><span class="rating">★ ${m.rating} <span class="muted">(${m.count})</span></span></div><span class="small muted">${esc(m.headline)}</span><p>${m.years} lat doświadczenia · ${m.lang}</p><div class="tags"><span class="tag">${esc(m.topic)}</span><span class="tag">1:1 online</span></div><div class="mentor-bottom"><div class="price">${money(m.price)}<small>za sesję 50 min · brutto</small></div>${btn('Poznaj mentora ↗', 'profile?mentor=' + m.id)}</div></div></article>`; }
+function empty(title, text, to = 'discover', cta = 'Znajdź mentora') { return `<div class="card state-panel"><div class="state-icon" aria-hidden="true">↗</div><h2>${title}</h2><p class="muted">${text}</p>${btn(cta, to)}</div>`; }
+function latest() { return state.sessions[state.sessions.length - 1]; }
+function summary(m = mentor()) { return `<div class="card sticky"><p class="eyebrow">TWOJA SESJA 1:1</p><div class="profile-head"><div class="profile-avatar" style="height:65px;width:65px;font-size:30px">${esc(m.initials)}</div><div><h3>${esc(m.name)}</h3><span class="small muted">${esc(m.headline)}</span></div></div><div class="divider"></div><div class="summary-row"><span>Czas trwania</span><strong>50 minut</strong></div><div class="summary-row"><span>Format</span><strong>Online · 1:1</strong></div>${slot ? `<div class="summary-row"><span>Termin</span><strong>${esc(dateLabel(slotISO()))}</strong></div>` : ''}<div class="summary-row"><span>Strefa</span><strong>${esc(state.timezone)}</strong></div><div class="summary-row total"><span>Łącznie brutto</span><span>${money(m.price)}</span></div><p class="tiny muted" style="margin-top:15px">Cena za jedną sesję. Bez automatycznego zakupu pakietu.</p></div>`; }
+function home() { return `<section class="hero"><div><p class="eyebrow">DOBRA ROZMOWA. KONKRETNY KIERUNEK.</p><h1>Twój kolejny<br>krok w IT.<br><em>Zróbmy go razem.</em></h1><p class="subtitle">Znajdź mentora, który rozumie Twoje wyzwania. Zamień pytania w plan, a plan w realny postęp.</p><div class="actions">${btn('Znajdź swojego mentora ↗', 'discover')}${action('Jak to działa ↓', 'how', 'secondary')}</div><div class="mini-proof"><div class="mini-avatars"><span>AK</span><span>PN</span><span>MW</span></div><div><b>Doświadczenie, którym warto się dzielić.</b><br><span class="muted">Praktycy · indywidualny plan · Twoje tempo</span></div></div></div><div class="hero-art" aria-label="Ilustracja indywidualnej ścieżki rozwoju"><div class="hero-board"><p class="eyebrow">TWOJA ŚCIEŻKA, TWÓJ RYTM</p><h2>Małe kroki.<br>Duża zmiana.</h2><svg viewBox="0 0 380 150" role="img" aria-label="Symboliczna ścieżka rozwoju"><path d="M10 125 Q60 130 85 100 T160 85 T235 55 T335 20" fill="none" stroke="#7c9c74" stroke-width="2" stroke-dasharray="5 8"/><path d="M10 125 Q60 130 85 100 T160 85" fill="none" stroke="#ddf890" stroke-width="4"/><circle cx="10" cy="125" r="7" fill="#ddf890"/><circle cx="160" cy="85" r="9" fill="#ddf890"/><circle cx="335" cy="20" r="7" fill="#e9e4f4"/><text x="12" y="148" fill="#c6d3c0" font-size="10">DZIŚ</text><text x="272" y="49" fill="#c6d3c0" font-size="10">TWÓJ CEL</text></svg><span class="small" style="color:#bfd1bc">Nie musisz mieć wszystkich odpowiedzi.</span></div><div class="art-card one"><span class="round-icon">↗</span><div><strong>Kierunek: rozwój</strong>Jeden cel. Jasny plan.</div></div><div class="art-card two"><div class="round-icon" style="background:#ddf890">AK</div><div><strong>Anna · Frontend</strong>„Przejdźmy przez to razem.”</div><span style="color:#64874e">●</span></div></div></section><div class="strip"><span><b>01</b> Znajdź swoją osobę</span><span><b>02</b> Spotkajcie się online</span><span><b>03</b> Zrób krok do przodu</span></div><section class="section"><div class="section-top"><div><p class="eyebrow">OD CZEGO ZACZYNAMY?</p><h2>Każda droga ma swój początek.</h2></div><a class="small" href="#discover">Wszystkie specjalizacje ↗</a></div><div class="grid-3">${[['⌘', 'Rozwijaj warsztat', 'Frontend, backend, dane i architektura', 'Frontend'], ['↗', 'Zaplanuj kolejny krok', 'Pierwsza praca, awans lub zmiana roli', 'Kariera'], ['◎', 'Zbuduj coś swojego', 'Portfolio, projekt i feedback od praktyka', 'Backend']].map(a => `<a class="path-card" href="#discover?topic=${encodeURIComponent(a[3])}"><div class="icon">${a[0]}</div><div><h3>${a[1]} ↗</h3><p>${a[2]}</p></div></a>`).join('')}</div></section><section class="section" id="how"><div class="section-top"><div><p class="eyebrow">PROSTO I PO TWOJEMU</p><h2>Od pierwszego pytania do planu.</h2></div></div><div class="grid-3">${[['1', 'Wybierz mentora', 'Sprawdź specjalizację, styl pracy i dostępność.'], ['2', 'Poznajcie się na sesji', '50 minut na Twój cel i pierwsze wspólne kroki.'], ['3', 'Zdecyduj, co dalej', 'Kolejna sesja lub pakiet — kiedy tego potrzebujesz.']].map(a => `<div class="card"><span class="step-number">${a[0]}</span><h3>${a[1]}</h3><p class="small muted">${a[2]}</p></div>`).join('')}</div></section>`; }
+function discover() { const list = allMentors().filter(m => (topic === 'Wszystkie' || m.topic === topic) && m.price <= budget && (language === 'Wszystkie' || m.lang.includes(language)) && (!onlyFavorites || state.favorites.includes(m.id)) && (m.name + ' ' + m.headline + ' ' + m.topic).toLowerCase().includes(search.toLowerCase())); if (sort === 'price')
+    list.sort((a, b) => a.price - b.price); if (sort === 'experience')
+    list.sort((a, b) => b.years - a.years); return page('Znajdź swoją osobę.', 'Dobry mentoring zaczyna się od dopasowania. Wybierz doświadczenie, którego teraz potrzebujesz.', `<div class="search-layout"><aside class="filters" aria-label="Filtry mentorów"><h3>Twój wybór <button class="link-button" data-action="reset-filters">Wyczyść</button></h3><div class="field"><label for="search">Imię lub specjalizacja</label><input id="search" placeholder="np. React, Anna…" maxlength="100" value="${esc(search)}"></div><div class="field"><label for="topic">Specjalizacja</label><select id="topic">${['Wszystkie', 'Frontend', 'Backend', 'Kariera', 'Data & AI'].map(v => `<option ${topic === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div><div class="field"><label for="budget">Budżet do ${money(budget)}</label><input id="budget" type="range" min="50" max="500" step="10" value="${budget}"><small>Za 50 minut, cena brutto</small></div><div class="field"><label for="language">Język sesji</label><select id="language">${['Wszystkie', 'PL', 'EN'].map(v => `<option ${language === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div><label class="check"><input type="checkbox" id="favorites" ${onlyFavorites ? 'checked' : ''}>Tylko ulubieni</label></aside><div><div class="results-top"><span class="small"><strong>${list.length} ${list.length === 1 ? 'mentor' : list.length < 5 ? 'mentorów' : 'mentorów'}</strong><span class="muted"> · profile demonstracyjne</span></span><label class="visually-hidden" for="sort">Sortuj mentorów</label><select class="input" id="sort"><option value="recommended" ${sort === 'recommended' ? 'selected' : ''}>Polecani dla Ciebie</option><option value="price" ${sort === 'price' ? 'selected' : ''}>Cena: rosnąco</option><option value="experience" ${sort === 'experience' ? 'selected' : ''}>Największe doświadczenie</option></select></div>${list.length ? `<div class="mentor-grid">${list.map(mentorCard).join('')}</div>` : `<div class="card"><h2>Jeszcze nie mamy dopasowania.</h2><p class="muted">Spróbuj zwiększyć budżet lub zmienić specjalizację.</p>${action('Wyczyść filtry', 'reset-filters')}</div>`}</div></div>`); }
+function profile() { const m = mentor(); return page('Poznajmy się.', 'Najpierw człowiek i dopasowanie. Potem wspólny plan.', `<div class="split"><div class="stack"><div class="card"><div class="profile-head"><div class="profile-avatar">${esc(m.initials)}</div><div>${badge('✓ Zweryfikowany mentor')}<h2 style="margin-top:12px;font-size:38px">${esc(m.name)}</h2><p class="muted small">${esc(m.headline)} · ${m.years} lat doświadczenia</p><span class="rating">★ ${m.rating} · ${m.count} opinii · ${m.lang}</span></div></div><div class="divider"></div><h3>W czym mogę Ci pomóc?</h3><p class="small muted">${esc(m.bio)}</p><div class="tags"><span class="tag">${esc(m.topic)}</span><span class="tag">Code review</span><span class="tag">Plan rozwoju</span></div></div><div class="card"><h2>Jak pracujemy?</h2><ul class="list-clean"><li>01 · Zaczynamy od Twojego kontekstu i celu.</li><li>02 · Pracujemy na prawdziwym przykładzie lub projekcie.</li><li>03 · Kończymy z konkretnymi kolejnymi krokami.</li></ul></div><div class="card"><h2>Głosy uczestników</h2>${m.count ? '<p class="quote">„Wreszcie wiem, na czym się skupić. Zamiast kolejnego kursu mam plan i feedback do własnego projektu.”</p><span class="tiny muted">Kasia · po odbytej sesji · opinia demonstracyjna</span>' : '<p class="muted small">Nowy mentor — opinie pojawią się po odbytych sesjach.</p>'}${state.sessions.filter(s => s.mentorId === m.id && s.reviewed && s.comment).map(s => `<div class="divider"></div><p class="small">★ ${s.rating} / 5 · Twoja opinia demo</p><p class="quote">${esc(s.comment)}</p>`).join('')}</div></div><aside class="stack sticky">${summary(m)}<div class="card"><p class="small">Najbliższy termin: <strong>${esc(dateLabel(dates[0] + 'T09:00:00+01:00'))}</strong></p><div class="stack" style="gap:10px">${action('Umów pierwszą sesję ↗', 'start-booking', 'full', `data-mentor="${m.id}"`)}${action('Napisz do mentora', 'contact', 'secondary full', `data-mentor="${m.id}"`)}</div><p class="tiny muted" style="margin-top:15px">Jedna płatna sesja. Dalsza współpraca zależy od Ciebie.</p></div></aside></div>`); }
+function auth() { return `<div class="card form-card"><p class="eyebrow">ZACHOWAJ SWÓJ KIERUNEK</p><h1>${authMode === 'login' ? 'Dobrze Cię widzieć.' : 'Zacznijmy od Ciebie.'}</h1><p class="muted small">Formularz demonstracyjny. Nie wpisuj prawdziwego hasła. Wybrany mentor i termin zostają z Tobą.</p><div class="tabs"><button data-action="auth-mode" data-mode="login" class="${authMode === 'login' ? 'active' : ''}">Logowanie</button><button data-action="auth-mode" data-mode="register" class="${authMode === 'register' ? 'active' : ''}">Rejestracja</button></div><form data-form="auth">${authMode === 'register' ? field('name', 'Twoje imię', state.name, 'required minlength="2" maxlength="80" autocomplete="given-name"') : ''}${field('email', 'Adres email (demo)', 'alex@example.test', 'required type="email" autocomplete="off"')}${field('password', 'Hasło demonstracyjne', 'DemoHaslo123!', 'required minlength="12" type="password" autocomplete="off"', 'Minimum 12 znaków. Nie używaj własnego hasła.')}${authMode === 'register' ? '<label class="check"><input type="checkbox" name="terms" required>Akceptuję demonstracyjne zasady korzystania z portalu.</label>' : ''}${errorBox()}<button class="btn full" type="submit">${authMode === 'login' ? 'Wejdź do demo ↗' : 'Utwórz konto demo ↗'}</button></form><p style="margin-top:18px" class="small"><a href="#reset">Nie pamiętasz hasła?</a></p></div>`; }
+function reset() { return `<div class="card form-card"><p class="eyebrow">ODZYSKAJ DOSTĘP</p><h1>Wróć na swoją ścieżkę.</h1><p class="small muted">Podaj adres demonstracyjny. Żadna wiadomość nie zostanie wysłana.</p><form data-form="reset">${field('email', 'Adres email', '', 'type="email" required placeholder="alex@example.test"')}${errorBox()}<button class="btn full">Wyślij instrukcję (demo)</button></form><p class="small" style="margin-top:20px"><a href="#auth">← Wróć do logowania</a></p></div>`; }
+function goals() { return page('Dokąd chcesz dojść?', 'Twój cel pomoże mentorowi przygotować pierwsze spotkanie.', `<form class="card" style="max-width:760px" data-form="goals"><h3>Wybierz najbliższy Ci kierunek</h3><div class="choice-grid">${['Pierwsza praca w IT', 'Rozwój techniczny', 'Zmiana roli lub awans', 'Własny projekt'].map(v => `<label class="choice ${state.goal === v ? 'selected' : ''}"><input type="radio" name="goal" value="${v}" ${state.goal === v ? 'checked' : ''} required> ${v}</label>`).join('')}</div>${select('level', 'Obecny poziom', ['Początkujący', 'Junior', 'Mid', 'Senior'], state.level)}${area('goalText', 'Co chcesz osiągnąć?', state.goalText, 'required minlength="20" maxlength="500"')}<p class="tiny muted">20–500 znaków. Nie zamieszczaj sekretów ani danych firmowych.</p>${errorBox()}<button class="btn">Zapisz cel i wybierz termin ↗</button></form>`); }
+function unavailableSlot(mentorId, d, t, ignoreId = '') {
+    const owned = state.application?.status === 'approved' ? 'candidate' : 'anna';
+    if (mentorId === owned) {
+        const row = ['09:00', '12:00', '16:00'].indexOf(t);
+        if (row < 0 || !state.availability.includes(d + '-' + row) || (d === 2 && row === 1))
+            return true;
+    }
+    else if (d === 1 && t === '12:00')
+        return true;
+    return state.sessions.some(s => s.status === 'scheduled' && s.mentorId === mentorId && s.id !== ignoreId && new Date(s.start).getTime() === new Date(slotISO(d, t)).getTime());
+}
+function booking() { const m = mentor(); return page(rescheduleId ? 'Znajdź nowy termin.' : 'Zarezerwuj czas na rozwój.', 'Wybierz 50 minut tylko dla siebie. Daty pokazujemy w Twojej strefie.', `<div class="split"><div class="card"><div class="actions" style="justify-content:space-between"><h3>Listopad 2026 · tydzień demo</h3>${badge(state.timezone)}</div><div class="notice">Zegar demo: 3 listopada 2026. Terminy przykładowe: 10–14 listopada. Strefę zmienisz w <a href="#settings"><u>ustawieniach</u></a>.</div><div class="days">${dates.map((d, i) => `<button class="day ${day === i ? 'selected' : ''}" data-action="day" data-day="${i}" aria-pressed="${day === i}"><span>${['WT', 'ŚR', 'CZW', 'PT', 'SOB'][i]}</span><b>${d.slice(-2)}</b>lis</button>`).join('')}</div><p class="small muted" style="margin-top:20px">Dni według Europe/Warsaw. Poniższe terminy: ${esc(state.timezone)} · 50 minut</p><div class="slots">${times.map(t => { const iso = slotISO(day, t); const unavailable = unavailableSlot(m.id, day, t, rescheduleId); const shown = dateLabel(iso, state.timezone === 'Europe/Warsaw' ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); return `<button class="slot ${slot === t ? 'selected' : ''}" data-action="slot" data-time="${t}" aria-pressed="${slot === t}" ${unavailable ? 'disabled' : ''} aria-label="${shown}${unavailable ? ' niedostępny' : ''}">${shown}${unavailable ? ' · niedostępne' : ''}</button>`; }).join('')}</div><p class="tiny muted">Zmiana lub anulowanie bez opłaty co najmniej 24 h wcześniej. Później skontaktuj się z obsługą.</p>${action(rescheduleId ? 'Potwierdź nowy termin' : 'Przejdź do podsumowania ↗', 'booking-next', 'full', slot ? '' : 'disabled')}</div>${summary(m)}</div>`); }
+function checkout() { if (!slot)
+    return page('Wybierz najpierw termin.', 'Potrzebujemy dnia i godziny spotkania.', empty('Kalendarz czeka na Ciebie.', 'Wybór terminu zajmie chwilę.', 'booking', 'Wybierz termin')); const credit = state.credits > 0 && selectedMentor === 'anna'; return page('Jeszcze jeden krok.', 'Sprawdź szczegóły. Makieta nie pobiera pieniędzy.', `<div class="split"><form class="card" data-form="checkout"><p class="eyebrow">PODSUMOWANIE ZAMÓWIENIA</p><h2>${credit ? 'Wykorzystaj sesję z pakietu.' : 'Zainwestuj czas w swój rozwój.'}</h2><p class="small muted">Cel: ${esc(state.goal)}. Sesja online 1:1, 50 minut.</p><div class="notice">${credit ? `Masz ${state.credits} sesje w pakiecie u Anny. Wykorzystasz 1 kredyt. Do zapłaty teraz: 0 PLN.` : 'Jednorazowa płatność bez abonamentu. W produkcji bezpieczny checkout operatora PSP.'}</div>${select('paymentResult', 'Symuluj wynik operacji', ['Sukces', 'Płatność odrzucona', 'Termin właśnie zajęty'], 'Sukces')}<label class="check"><input type="checkbox" name="terms" required>Akceptuję zasadę zmiany i anulowania minimum 24 h przed sesją oraz podsumowanie zamówienia.</label>${errorBox()}<button class="btn full" type="submit">${credit ? 'Potwierdź za 1 kredyt (demo)' : 'Zapłać ' + money(mentor().price) + ' (demo)'}</button><p class="tiny muted" style="margin-top:14px">Żadnych danych kart. Żadnych prawdziwych obciążeń.</p><a class="small" href="#booking">← Zmień termin</a></form>${summary()}</div>`); }
+function confirmation() { const s = latest(); if (s?.status === 'cancelled')
+    return empty('Ta sesja została anulowana.', 'Sprawdź status zwrotu w Moich sesjach.', 'sessions', 'Moje sesje'); if (!s)
+    return empty('Nie ma jeszcze rezerwacji.', 'Wybierz mentora i termin.'); return page('Czas dla Ciebie — zapisany.', 'Twoja rezerwacja jest potwierdzona w tej makiecie.', `<div class="card" style="max-width:780px">${badge('✓ Rezerwacja potwierdzona')}<h2 style="margin-top:22px">${esc(sessionMentor(s).name)} · 50 minut</h2><p>${esc(dateLabel(s.start))}</p><p class="small muted">${esc(state.timezone)} · Sesja ${s.id} · Online</p><div class="notice">Przed spotkaniem przygotuj pytanie lub fragment projektu. Nie udostępniaj haseł ani sekretów.</div><div class="actions">${btn('Przejdź do moich sesji ↗', 'sessions')}${action('Dodaj do kalendarza (.ics)', 'calendar', 'secondary', `data-id="${s.id}"`)}${btn('Napisz do mentora', 'messages?mentor=' + s.mentorId, 'secondary')}</div></div>`); }
+function sessionCard(s) { const m = sessionMentor(s), d = dateLabel(s.start, { day: '2-digit' }); return `<article class="session"><div class="date-box"><span>LIS</span><b>${d}</b>2026</div><div class="session-info"><h3>${esc(m.name)} · ${esc(m.topic)}</h3><p class="small muted" style="margin:0 0 5px">${esc(dateLabel(s.start))} · 50 min · ${esc(state.timezone)}</p>${badge(s.status === 'scheduled' ? 'Zaplanowana' : s.status === 'completed' ? 'Zakończona' : 'Anulowana', s.status === 'cancelled' ? 'warn' : 'good')}${s.refund ? ` <span class="tiny muted">${esc(s.refund)}</span>` : ''}</div><div class="actions">${s.status === 'scheduled' ? action('Dołącz ↗', 'open-room', '', `data-id="${s.id}"`) + action('Przełóż', 'reschedule', 'secondary', `data-id="${s.id}"`) + action('Anuluj', 'cancel', 'secondary', `data-id="${s.id}"`) : s.status === 'completed' && !s.reviewed ? action('Oceń sesję', 'open-review', 'secondary', `data-id="${s.id}"`) : ''}</div></article>`; }
+function dashboard() { const next = state.sessions.find(s => s.status === 'scheduled'), completed = state.sessions.filter(s => s.status === 'completed').length, progress = state.milestones.filter(Boolean).length * 25; return page(`Cześć, ${esc(state.name)}.`, 'Każdy mały krok ma znaczenie. Co dziś zrobisz dla swojego rozwoju?', `<div class="kpis"><div class="kpi"><span>Odbyte sesje</span><strong>${completed}</strong><small>Dobry rytm zaczyna się od pierwszej</small></div><div class="kpi"><span>Postęp Twojego planu</span><strong>${progress}%</strong><small>${state.milestones.filter(Boolean).length} z 4 kroków</small></div><div class="kpi"><span>Sesje w pakiecie</span><strong>${state.credits}</strong><small>Do wykorzystania z Anną</small></div></div><div class="split"><div class="stack"><div><h2>Twoje najbliższe spotkanie</h2>${next ? sessionCard(next) : empty('Zróbmy pierwszy krok.', 'Wybierz osobę, z którą chcesz porozmawiać.')}</div><div class="card"><p class="eyebrow">KIERUNEK: TWÓJ CEL</p><h2>${esc(state.goal)}</h2><p class="small muted">${esc(state.goalText)}</p><div class="progress"><div style="width:${progress}%"></div></div>${btn('Otwórz plan rozwoju ↗', 'plan', 'secondary')}</div></div><div class="card lav"><p class="eyebrow">DOBRZE SIĘ PRZYGOTOWAĆ</p><h2>Jedno pytanie<br>na początek.</h2><p class="small">Z czym najbardziej potrzebujesz teraz ruszyć? Zapisz konkretny przykład i podziel się nim z mentorem.</p>${btn('Otwórz wiadomości', 'messages', 'secondary')}<div class="divider"></div><p class="tiny muted">To Twoja przestrzeń. Wracaj w swoim tempie.</p></div></div>`, btn('Znajdź mentora ↗', 'discover')); }
+function sessions() { const list = state.sessions.filter(s => s.status === sessionTab); return page('Czas na spotkanie.', 'Twoje sesje, terminy i kolejne kroki w jednym miejscu.', `<div class="tabs" role="group" aria-label="Status sesji">${[['scheduled', 'Nadchodzące'], ['completed', 'Zakończone'], ['cancelled', 'Anulowane']].map(([v, t]) => `<button data-action="session-tab" data-tab="${v}" class="${sessionTab === v ? 'active' : ''}" aria-pressed="${sessionTab === v}">${t} (${state.sessions.filter(s => s.status === v).length})</button>`).join('')}</div>${list.length ? list.map(sessionCard).join('') : empty('Tu pojawią się Twoje sesje.', 'Nie masz jeszcze spotkań w tej kategorii.')}<div class="notice">Reguła demo: bezpłatna zmiana lub anulowanie minimum 24 h przed sesją. Zegar jest zatrzymany na 3 listopada 2026. W pokoju demo możesz dołączyć od razu.</div>`, btn('Umów kolejną sesję ↗', 'discover')); }
+let activeSessionId = '';
+function activeSession() { return state.sessions.find(s => s.id === activeSessionId) || state.sessions.find(s => s.status === 'scheduled') || latest(); }
+function room() { const s = activeSession(); if (!s || s.status !== 'scheduled')
+    return empty('Pokój czeka na rezerwację.', 'Najpierw zarezerwuj przyszłą sesję.', 'sessions', 'Moje sesje'); const m = sessionMentor(s); return page('Przestrzeń na dobrą rozmowę.', 'Demonstracja pokoju. Obraz, dźwięk i dołączenie są symulowane.', `<div class="split"><div><div class="room-stage"><p class="eyebrow" style="color:#ddf890">${joined ? 'POŁĄCZENIE DEMONSTRACYJNE' : 'LOBBY · GOTOWI NA ROZMOWĘ?'}</p><div class="room-avatar">${esc(m.initials)}</div><h3>${esc(m.name)}</h3><p class="small" style="color:#c7d7c8">${joined ? 'Jesteście w pokoju demo.' : 'Termin: ' + esc(dateLabel(s.start))}</p>${joined ? '<div class="self-video">Ty · demo</div>' : action('Dołącz do pokoju (demo)', 'join', '', 'style="background:#ddf890;color:#173b32;border-color:#ddf890"')}</div><div class="room-controls">${action(mic ? 'Mikrofon: wł.' : 'Mikrofon: wył.', 'mic', 'secondary', `aria-pressed="${mic}"`)}${action(camera ? 'Kamera: wł.' : 'Kamera: wył.', 'camera', 'secondary', `aria-pressed="${camera}"`)}${joined ? action('Zakończ sesję', 'finish', 'danger') : ''}</div><p class="tiny muted">Nie prosimy o dostęp do kamery ani mikrofonu. Połączenie WebRTC jest poza zakresem makiety.</p></div><form class="card" data-form="notes"><h2>Zapisz to, co ważne.</h2>${area('note', 'Twoje notatki', s.note, 'maxlength="2000"')}<button class="btn full">Zapisz notatkę</button><p class="tiny muted" style="margin-top:12px">Notatka tylko w tej przeglądarce.</p><a href="#support" class="small">Masz problem ze spotkaniem? ↗</a></form></div>`); }
+function review() { const s = state.sessions.find(x => x.id === activeSessionId && x.status === 'completed') || state.sessions.find(x => x.status === 'completed' && !x.reviewed); if (!s)
+    return empty('Opinia po spotkaniu.', 'Najpierw zakończ sesję w pokoju demo.', 'sessions', 'Otwórz moje sesje'); if (s.reviewed)
+    return empty('Dziękujemy za opinię.', 'Jedna sesja, jedna opinia. Zajrzyj teraz do planu.', 'plan', 'Twój plan'); return page('Dobry moment na refleksję.', 'Jak minęła sesja? Twoja opinia pomaga innym wybrać mentora.', `<div class="split"><form class="card" data-form="review" data-id="${s.id}"><h2>Sesja z ${esc(sessionMentor(s).name.split(' ')[0])}</h2><p class="small muted">Ocena po odbytej sesji · ${s.id}</p><fieldset style="border:0;padding:0;margin:0"><legend class="small">Wybierz ocenę od 1 do 5</legend><div class="stars">${[1, 2, 3, 4, 5].map(n => `<label><span aria-hidden="true">★</span><input type="radio" name="rating" value="${n}" required aria-label="${n} na 5"></label>`).join('')}</div></fieldset>${area('comment', 'Co było dla Ciebie wartościowe?', '', 'required minlength="10" maxlength="1000" placeholder="Twoje doświadczenie z sesji…"')}${errorBox()}<button class="btn full">Zapisz opinię ↗</button></form><div class="card lav"><p class="eyebrow">NIE ZATRZYMUJMY TEGO KROKU</p><h2>Rozmowa to początek.</h2><p class="small">Wróć do swoich kamieni milowych i wybierz jedną rzecz, którą zrobisz przed kolejnym spotkaniem.</p>${btn('Otwórz plan rozwoju', 'plan', 'secondary')}</div></div>`); }
+function messages() { const m = mentor(), msgs = state.messages[m.id] || []; return page('Porozmawiajmy.', 'Pytania przed sesją i ustalenia po niej. Rozmowy w tej makiecie są lokalne.', `<div class="chat"><aside class="chat-list" aria-label="Rozmowy">${allMentors().map(x => `<button class="thread ${m.id === x.id ? 'active' : ''}" data-action="thread" data-mentor="${x.id}"><strong>${esc(x.name)}</strong><small>${esc(x.topic)} · rozmowa demo</small></button>`).join('')}</aside><section class="chat-pane"><div class="chat-head"><strong>${esc(m.name)}</strong><div class="small muted">${esc(m.headline)} · ${badge('DEMO')}</div></div><div class="bubbles" aria-live="polite">${msgs.length ? '' : `<div class="notice">Jeszcze nie rozmawialiście. Opisz swój cel lub zapytaj o styl współpracy.</div>`}${msgs.map(t => `<div class="bubble mine">${esc(t)}<small>Ty · zapisano lokalnie</small></div>`).join('')}</div><form class="chat-form" data-form="message"><label class="visually-hidden" for="message">Twoja wiadomość</label><input class="input" id="message" name="message" placeholder="Napisz, z czym przychodzisz…" required maxlength="2000"><button class="btn">Wyślij ↗</button></form></section></div><div class="actions" style="margin-top:18px">${action('Umów sesję', 'start-booking', 'secondary', `data-mentor="${m.id}"`)}${btn('Zgłoś problem', 'support', 'secondary')}</div>`); }
+const milestones = [['Nazwij swój kierunek', 'Wybierz cel i opisz punkt wyjścia.'], ['Uporządkuj podstawy', 'Przejrzyj strukturę swojego projektu.'], ['Zbuduj i pokaż', 'Zrealizuj mały projekt i poproś o feedback.'], ['Przygotuj następny krok', 'Podsumuj wnioski i uaktualnij plan.']];
+function plan() { const progress = state.milestones.filter(Boolean).length * 25; return page('Małe kroki, duża zmiana.', 'Twój plan powstaje w rozmowie i żyje między sesjami.', `<div class="split"><div><div class="card"><p class="eyebrow">TWÓJ GŁÓWNY CEL</p><h2>${esc(state.goal)}</h2><p class="small muted">${esc(state.goalText)}</p><div class="summary-row"><span class="small">Postęp</span><strong>${progress}%</strong></div><div class="progress" role="progressbar" aria-label="Postęp planu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><div style="width:${progress}%"></div></div></div><h3 style="margin-top:25px">Twoje kamienie milowe</h3>${milestones.map((m, i) => `<label class="milestone ${state.milestones[i] ? 'done' : ''}"><input type="checkbox" data-milestone="${i}" ${state.milestones[i] ? 'checked' : ''}><span><strong>${m[0]}</strong><small>${m[1]}</small></span></label>`).join('')}</div><div class="card dark"><p class="eyebrow" style="color:#ddf890">KROK DALEJ</p><h2>Z czym wrócisz<br>na kolejną sesję?</h2><p class="small muted">Wybierz jeden temat. Przynieś przykład. Zróbcie wspólnie kolejny krok.</p>${action('Zarezerwuj sesję ↗', 'start-booking', 'light', 'data-mentor="anna"')}<div class="divider"></div>${btn('Zmień swój cel', 'goals', 'secondary')}</div></div>`); }
+const packageCost = () => allMentors().find(m => m.id === 'anna').price * 4;
+function billing() { const eligible = state.sessions.some(s => s.status === 'completed' && s.mentorId === 'anna'), active = ['active', 'paused'].includes(state.subscription); return page('Współpraca na Twoich zasadach.', 'Jedna sesja lub regularny rytm. Zawsze z jasnym kosztem i wyborem.', `<div class="grid-2"><div class="card"><p class="eyebrow">REGULARNY RYTM · ANNA KOWALSKA</p><h2>4 rozmowy.<br>Więcej przestrzeni na postęp.</h2><div class="price" style="font-size:37px">${money(packageCost())}<small>4 × 50 minut · ${money(packageCost() / 4)} / sesję · brutto</small></div><div class="notice">Propozycja: pakiet ważny 90 dni. Odnowienie po 30 dniach tylko z osobną zgodą. Bez odnowienia — jednorazowy zakup.</div>${active ? `<p>${badge(state.subscription === 'active' ? 'Pakiet aktywny' : 'Pakiet wstrzymany', 'good')}</p><p class="small">Pozostało <strong>${state.credits} sesji</strong>. Odnowienie: <strong>${state.renew && state.subscription === 'active' ? state.renewal : 'wyłączone'}</strong>.</p><div class="actions">${action(state.subscription === 'active' ? 'Wstrzymaj odnowienie' : 'Wznów z odnowieniem', 'subscription-toggle', 'secondary')}${action('Zrezygnuj z odnowienia', 'subscription-cancel', 'secondary')}</div>` : `<form data-form="package"><label class="check"><input type="checkbox" name="renew">Chcę automatyczne odnowienie za ${money(packageCost())} po 30 dniach. Mogę wyłączyć je w panelu.</label><button class="btn full" ${eligible ? '' : 'disabled'}>Kup pakiet za ${money(packageCost())} (demo)</button>${!eligible ? '<p class="tiny muted">Pakiet jest dostępny po pierwszej odbytej sesji z Anną. Najpierw sprawdźcie dopasowanie.</p>' : ''}</form>`}</div><div class="card lav"><p class="eyebrow">TWÓJ BILANS</p><h2>${state.credits} sesji<br>do wykorzystania.</h2><p class="small">Opłacone kredyty pozostają dostępne po wyłączeniu odnowienia, zgodnie z ważnością pakietu.</p>${action('Wybierz kolejny termin', 'start-booking', 'secondary', 'data-mentor="anna"')}<div class="divider"></div><p class="tiny muted">Płatności i dokumenty w prototypie to symulacje. Nie podawaj danych finansowych.</p></div></div><h2 style="margin-top:35px">Historia płatności</h2>${state.transactions.length ? `<div class="table-wrap"><table><caption>Transakcje demonstracyjne</caption><thead><tr><th>Numer</th><th>Pozycja</th><th>Kwota</th><th>Status</th><th>Dokument</th></tr></thead><tbody>${state.transactions.map(t => `<tr><td>${t.id}</td><td>${esc(t.label)}</td><td>${money(t.amount)}</td><td>${badge(t.status)}</td><td><button class="link-button" data-action="receipt" data-id="${t.id}">Pobierz DEMO</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="notice">Brak płatności. Pierwsza transakcja pojawi się po rezerwacji sesji.</div>'}`); }
+function settings() { return page('Twoja przestrzeń, Twoje ustawienia.', 'Dbaj o aktualne dane i godziny spotkań.', `<form class="card" style="max-width:680px" data-form="settings">${field('name', 'Twoje imię', state.name, 'required minlength="2" maxlength="80"')}${field('email', 'Email demonstracyjny', state.email, 'required type="email"', 'W produkcji zmiana adresu wymaga potwierdzenia.')}${select('timezone', 'Strefa czasowa', ['Europe/Warsaw', 'Europe/London', 'America/New_York', 'Asia/Tokyo'], state.timezone)}<label class="check"><input type="checkbox" name="notifications" ${state.notifications ? 'checked' : ''}>Przypomnienia o sesjach (preferencja demo)</label>${errorBox()}<div class="actions"><button class="btn">Zapisz ustawienia</button>${action('Wyloguj z demo', 'logout', 'secondary')}</div></form>`); }
+function support() { return page('Jesteśmy tu, by pomóc.', 'Opisz sytuację. W demo zgłoszenie trafi do lokalnej kolejki administratora.', `<div class="split"><div class="help-grid"><h2>Najczęstsze pytania</h2>${[['Czy pierwsza sesja uruchamia abonament?', 'Nie. Kupujesz jedno spotkanie. Pakiet i odnowienie są osobnym wyborem.'], ['Jak przełożyć lub anulować sesję?', 'W Moich sesjach wybierz akcję. Co najmniej 24 h wcześniej bez opłaty. Później skontaktuj się z obsługą.'], ['Co jeśli spotkanie się nie odbędzie?', 'Zgłoś problem z numerem sesji. Obsługa sprawdzi sytuację; w koncepcji spór wstrzymuje rozliczenie.'], ['Czy makieta naprawdę wysyła wiadomości?', 'Nie. Wszystkie dane i operacje pozostają w przeglądarce.']].map(a => `<details><summary>${a[0]}</summary><p>${a[1]}</p></details>`).join('')}<h3 style="margin-top:28px">Twoje zgłoszenia</h3>${state.tickets.length ? state.tickets.map(t => `<div class="notice"><strong>${t.id}</strong> · ${esc(t.category)} ${badge(t.status, t.status === 'resolved' ? 'good' : 'warn')}${t.decision ? `<p>${esc(t.decision)}</p>` : ''}</div>`).join('') : '<p class="small muted">Nie masz jeszcze zgłoszeń.</p>'}</div><form class="card" data-form="support"><h2>Opowiedz, co się stało.</h2>${select('category', 'Kategoria', ['Problem z sesją', 'Płatność lub zwrot', 'Zgłoszenie profilu', 'Inne'], 'Problem z sesją')}${field('email', 'Adres do kontaktu (demo)', state.email, 'required type="email"')}${field('sessionId', 'Numer sesji (opcjonalnie)', '', 'placeholder="DM-…"')}${area('description', 'Opis problemu', '', 'required minlength="20" maxlength="2000"')}${errorBox()}<button class="btn full">Utwórz zgłoszenie (demo)</button></form></div>`); }
+function mentorApply() { if (state.application)
+    return page('Twoje doświadczenie ma znaczenie.', 'Status Twojej aplikacji.', `<div class="card"><h2>${esc(state.application.name)}</h2>${badge(state.application.status === 'pending' ? 'Oczekuje na weryfikację' : state.application.status === 'approved' ? 'Zatwierdzona' : 'Odrzucona', state.application.status === 'approved' ? 'good' : 'warn')}<p class="small muted" style="margin-top:18px">${esc(state.application.decision || 'W demo przełącz rolę na Administrator, aby rozpatrzyć zgłoszenie.')}</p>${btn('Przejdź do pulpitu mentora', 'mentor-dashboard', 'secondary')}</div>`); return page('Podziel się drogą, którą znasz.', 'Pomóż komuś zrobić kolejny krok. Zgłoś się jako mentor.', `<div class="split"><form class="card" data-form="mentor-apply">${field('candidateName', 'Imię i nazwisko', 'Patrycja Lis', 'required minlength="3" maxlength="80"')}${select('specialty', 'Specjalizacja', ['Frontend', 'Backend', 'Kariera', 'Data & AI'], 'Frontend')}${field('years', 'Lata doświadczenia', '7', 'required type="number" min="1" max="40"')}${field('price', 'Cena brutto za 50 min (PLN)', '180', 'required type="number" min="50" max="500" step="10"')}${area('bio', 'W czym pomożesz uczestnikom?', 'Pomagam developerom budować pewność w codziennej pracy z TypeScript i React. Na sesjach omawiamy prawdziwy kod i planujemy praktyczne kroki rozwoju.', 'required minlength="50" maxlength="1000"')}<label class="check"><input type="checkbox" name="terms" required>Potwierdzam prawdziwość danych w koncepcji i akceptuję zasady współpracy demonstracyjnej.</label>${errorBox()}<button class="btn full">Wyślij aplikację (demo) ↗</button></form><div class="card lav"><p class="eyebrow">JAK TO WYGLĄDA?</p><h2>Najpierw poznajmy Ciebie.</h2><ul class="list-clean"><li>01 · Opisz doświadczenie i styl pracy.</li><li>02 · Poczekaj na decyzję moderatora.</li><li>03 · Uzupełnij profil i dostępność.</li></ul><p class="tiny muted" style="margin-top:20px">Weryfikacja i tożsamość są symulowane. W produkcji wymagają odrębnego procesu.</p></div></div>`); }
+function mentorDashboard() { const pending = state.application && state.application.status !== 'approved'; return page('Dobre rozmowy zaczynają się tutaj.', 'Twój warsztat mentora: spotkania, oferta i dostępność.', `${pending ? `<div class="notice">${state.application?.status === 'pending' ? 'Aplikacja czeka na weryfikację. W demo przełącz rolę na Administrator i otwórz kolejkę.' : 'Aplikacja odrzucona: ' + esc(state.application?.decision || 'Sprawdź uzasadnienie.')} ${btn('Moja aplikacja', 'mentor-apply', 'secondary')}</div>` : ''}<div class="kpis"><div class="kpi"><span>Zaplanowane spotkania demo</span><strong>${state.sessions.filter(s => s.status === 'scheduled').length}</strong><small>Sprawdź przygotowanie do sesji</small></div><div class="kpi"><span>Wolne sloty</span><strong>${state.availability.length}</strong><small>W tygodniu demonstracyjnym</small></div><div class="kpi"><span>Saldo do wypłaty — seed demo</span><strong>${money(state.payout)}</strong><small>Dane przykładowe, odrębne od checkoutu</small></div></div><div class="grid-2"><div class="card"><p class="eyebrow">TWÓJ KALENDARZ</p><h2>Zrób miejsce na rozwój innych.</h2><p class="small muted">Regularnie aktualizuj terminy, które możesz zaproponować.</p>${btn('Edytuj dostępność ↗', 'availability')}</div><div class="card lav"><p class="eyebrow">TWOJA WIZYTÓWKA</p><h2>Pokaż, jak pracujesz.</h2><p class="small muted">Konkretny opis pomaga uczestnikom podjąć świadomą decyzję.</p>${btn('Edytuj profil ↗', 'mentor-profile', 'secondary')}</div></div><h2 style="margin-top:30px">Spotkania w demo</h2>${state.sessions.filter(s => s.status === 'scheduled').map(sessionCard).join('') || '<div class="notice">Nie ma jeszcze spotkań. Najpierw przejdź ścieżkę rezerwacji jako uczestnik.</div>'}`); }
+function availability() { return page('Czas, który możesz podarować.', 'Zaznacz dostępne okna. Sesje trwają 50 minut, kolejne 10 minut to bufor.', `<div class="card"><div class="actions" style="justify-content:space-between"><h3>10–14 listopada 2026 · godziny Warszawy</h3>${badge('Europe/Warsaw')}</div><p class="small muted">Siatka jest celowo opisana w stałej strefie. W produkcji UTC w API i lokalna strefa odbiorcy.</p><div class="schedule-wrap"><div class="schedule"><span>Godzina</span>${['WT 10', 'ŚR 11', 'CZW 12', 'PT 13', 'SOB 14'].map(d => `<strong>${d}</strong>`).join('')}${['09:00', '12:00', '16:00'].map((t, r) => `<strong>${t}</strong>` + [0, 1, 2, 3, 4].map(c => { const id = c + '-' + r, owned = state.application?.status === 'approved' ? 'candidate' : 'anna', blocked = (c === 2 && r === 1) || state.sessions.some(s => s.status === 'scheduled' && s.mentorId === owned && new Date(s.start).getTime() === new Date(slotISO(c, t)).getTime()); return `<button class="slot ${state.availability.includes(id) ? 'selected' : ''}" data-action="availability-slot" data-slot="${id}" aria-pressed="${state.availability.includes(id)}" aria-label="${['Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'][c]} ${t}" ${blocked ? 'disabled' : ''}>${blocked ? 'Zajęte' : state.availability.includes(id) ? 'Wolny ✓' : '—'}</button>`; }).join('')).join('')}</div></div><div class="notice">Zajęta sesja jest zablokowana przed usunięciem. Zapisana dostępność pojawia się w kalendarzu rezerwacji Anny lub zatwierdzonego kandydata.</div>${action('Zapisz dostępność', 'save-availability', '')}${errorBox()}</div>`); }
+function mentorProfile() { return page('Twoje doświadczenie, Twoim głosem.', 'Edytuj ofertę. Zapis nie zmienia cen istniejących rezerwacji.', `<div class="split"><form class="card" data-form="mentor-profile">${field('headline', 'Nagłówek profilu', state.profileHeadline, 'required minlength="10" maxlength="100"')}${area('profileBio', 'Opis współpracy', state.profileBio, 'required minlength="50" maxlength="1000"')}${field('profilePrice', 'Cena brutto za 50 min (PLN)', String(state.profilePrice), 'required type="number" min="50" max="500" step="10"')}${errorBox()}<button class="btn full">Zapisz profil</button></form><div class="card lav"><p class="eyebrow">PODGLĄD OFERTY DEMO</p><h2>${esc(state.application?.name || 'Anna Kowalska')}</h2><h3>${esc(state.profileHeadline)}</h3><p class="small">${esc(state.profileBio)}</p><strong>${money(state.profilePrice)} / 50 min</strong><p class="tiny muted" style="margin-top:15px">Dla zaakceptowanego kandydata zmiany pojawią się w katalogu.</p></div></div>`); }
+function earnings() { return page('Twoja praca ma swoją wartość.', 'Przejrzyste rozliczenia. Kwoty poniżej to przykładowe dane historyczne.', `<div class="kpis"><div class="kpi"><span>Historyczne brutto</span><strong>1 800 zł</strong><small>10 przykładowych sesji</small></div><div class="kpi"><span>Prowizja platformy · 15%</span><strong>270 zł</strong><small>Propozycja modelu biznesowego</small></div><div class="kpi"><span>Dostępne do wypłaty</span><strong>${money(state.payout)}</strong><small>${state.payoutPending ? 'Wypłata w realizacji (demo)' : 'Po rozliczeniu, konto PSP zweryfikowane w demo'}</small></div></div><div class="card"><div class="page-top"><div><h2>Środki rozliczone.</h2><p class="small muted">Wypłata w produkcji wymaga weryfikacji KYC u operatora.</p></div>${action('Zleć wypłatę (demo)', 'payout', '', state.payout > 0 ? '' : 'disabled')}</div><div class="table-wrap"><table><caption>Przykład rozliczenia</caption><thead><tr><th>Pozycja</th><th>Brutto</th><th>Prowizja</th><th>Netto</th><th>Status</th></tr></thead><tbody><tr><td>Sesje historyczne · 10 × 180 PLN</td><td>1 800 PLN</td><td>270 PLN</td><td>1 530 PLN</td><td>${badge(state.payoutPending ? 'Wypłata zlecona' : 'Rozliczone')}</td></tr></tbody></table></div></div>`); }
+function admin() { return page('Miejsce na dobre decyzje.', 'Kolejki operacyjne. Wszystkie sprawy są demonstracyjne.', `<div class="kpis"><div class="kpi"><span>Aplikacje do weryfikacji</span><strong>${state.application?.status === 'pending' ? 1 : 0}</strong><small>Jakość przed publikacją</small></div><div class="kpi"><span>Otwarte zgłoszenia</span><strong>${state.tickets.filter(t => t.status === 'open').length}</strong><small>Każdy problem potrzebuje odpowiedzi</small></div><div class="kpi"><span>Aktywni mentorzy demo</span><strong>${allMentors().length}</strong><small>Profile w katalogu</small></div></div><div class="table-wrap"><table><caption>Kolejka spraw</caption><thead><tr><th>Numer / osoba</th><th>Typ</th><th>Status</th><th>Akcja</th></tr></thead><tbody>${state.application ? `<tr><td>${esc(state.application.name)}</td><td>Weryfikacja mentora</td><td>${badge(state.application.status, 'warn')}</td><td><a class="btn secondary" href="#moderation?case=application">Otwórz sprawę</a></td></tr>` : ''}${state.tickets.map(t => `<tr><td>${t.id}</td><td>${esc(t.category)}</td><td>${badge(t.status, t.status === 'open' ? 'warn' : 'good')}</td><td><a class="btn secondary" href="#moderation?case=${t.id}">Otwórz sprawę</a></td></tr>`).join('')}${!state.application && !state.tickets.length ? '<tr><td colspan="4">Brak spraw. Utwórz aplikację mentora lub zgłoszenie pomocy w demo.</td></tr>' : ''}</tbody></table></div><div class="notice">Rola demo Administrator łączy podgląd supportu i moderacji. W produkcji obowiązuje rozdział RBAC, rejestrowanie decyzji i ograniczenie dostępu do danych.</div>`); }
+function moderation() { const application = currentCase === 'application', item = state.tickets.find(t => t.id === currentCase), a = state.application; if ((application && !a) || (!application && !item))
+    return empty('Wybierz sprawę z kolejki.', 'Najpierw utwórz aplikację lub zgłoszenie w demo.', 'admin', 'Otwórz panel operacyjny'); const done = application ? a.status !== 'pending' : item.status !== 'open'; return page('Sprawdź kontekst. Uzasadnij decyzję.', 'Decyzja trafia do lokalnego dziennika sprawy w demo.', `<div class="split"><div class="card"><p class="eyebrow">${application ? 'APLIKACJA MENTORA' : 'ZGŁOSZENIE ' + esc(item.id)}</p><h2>${application ? esc(a.name) : esc(item.category)}</h2><p class="small muted">${esc(application ? a.bio : item.text)}</p>${application ? `<div class="tags"><span class="tag">${esc(a.topic)}</span><span class="tag">${a.years} lat</span><span class="tag">${money(a.price)} / sesję</span></div>` : ''}<div class="notice">${done ? 'Sprawa zamknięta: ' + esc(application ? a.decision : item.decision) : 'Sprawa otwarta. Sprawdź dane i zapisz powód decyzji.'}</div></div>${done ? `<div class="card"><h2>Decyzja zapisana.</h2>${btn('Wróć do kolejki ↗', 'admin')}</div>` : `<form class="card" data-form="decision"><h2>${application ? 'Weryfikacja oferty' : 'Odpowiedź i zamknięcie'}</h2>${application ? '<label class="check"><input type="checkbox" name="verified" required>Sprawdzono profil i doświadczenie w symulacji.</label>' : ''}${select('decision', 'Decyzja', application ? ['Zatwierdź mentora', 'Odrzuć aplikację'] : ['Rozwiąż zgłoszenie'], application ? 'Zatwierdź mentora' : 'Rozwiąż zgłoszenie')}${area('reason', 'Uzasadnienie / odpowiedź', '', 'required minlength="10" maxlength="1000"')}${errorBox()}<button class="btn full">Zapisz decyzję (demo)</button><p class="tiny muted" style="margin-top:15px">W produkcji audyt zawiera operatora, czas, wersję sprawy i podstawę decyzji.</p></form>`}</div>`); }
+const roleNames = { mentee: 'Uczestnik', mentor: 'Mentor', admin: 'Administrator' };
+const panelHome = () => state.role === 'mentor' ? 'mentor-dashboard' : state.role === 'admin' ? 'admin' : 'dashboard';
+function navigation() { const links = state.role === 'mentor' ? [['mentor-dashboard', '⌂', 'Mój pulpit'], ['sessions', '◷', 'Sesje'], ['availability', '▦', 'Dostępność'], ['mentor-profile', '◎', 'Mój profil'], ['messages', '✉', 'Wiadomości'], ['earnings', '↗', 'Zarobki'], ['settings', '⚙', 'Ustawienia'], ['support', '?', 'Pomoc']] : state.role === 'admin' ? [['admin', '▦', 'Panel operacyjny'], ['moderation', '✓', 'Szczegóły sprawy'], ['support', '?', 'Pomoc']] : [['dashboard', '⌂', 'Mój pulpit'], ['sessions', '◷', 'Moje sesje'], ['messages', '✉', 'Wiadomości'], ['plan', '↗', 'Plan rozwoju'], ['billing', '▤', 'Płatności'], ['settings', '⚙', 'Ustawienia'], ['support', '?', 'Pomoc']]; return links.map(([r, i, t]) => `<a class="${route() === r ? 'active' : ''}" href="#${r}" ${route() === r ? 'aria-current="page"' : ''}><span aria-hidden="true">${i}</span>${t}</a>`).join(''); }
+function stateView() { const m = meta(); if (uiState === 'loading')
+    return page(m.title, 'Przykładowy stan loading.', `<div class="card state-panel" aria-busy="true"><p class="eyebrow">ŁADOWANIE</p><div class="skeleton short"></div><div class="skeleton tall"></div><div class="skeleton"></div><p class="small muted" role="status">${m.loading}</p>${action('Zakończ symulację ładowania', 'normal')}</div>`); const description = uiState === 'empty' ? m.empty : uiState === 'error' ? m.error : m.success; return page(m.title, 'Tryb prezentacji stanu · dane nie są modyfikowane.', `<div class="card state-panel"><div class="state-icon" aria-hidden="true">${uiState === 'error' ? '!' : uiState === 'success' ? '✓' : '○'}</div><h2>${uiState === 'error' ? 'Potrzebujemy jeszcze jednej próby.' : uiState === 'empty' ? 'Tu zaczyna się kolejny krok.' : 'Wszystko gotowe.'}</h2><p class="notice ${uiState === 'error' ? 'error' : 'success'}" role="${uiState === 'error' ? 'alert' : 'status'}">${description}</p>${action(uiState === 'error' ? 'Ponów próbę' : 'Wróć do ekranu', 'normal', '')}<div class="state-meta"><p><strong>Walidacje:</strong> ${esc(m.validation)}</p><p><strong>Docelowe API:</strong> ${esc(m.api)}</p></div></div>`); }
+const views = { home, discover, profile, auth, reset, goals, booking, checkout, confirmation, dashboard, sessions, room, review, messages, plan, billing, settings, support, 'mentor-apply': mentorApply, 'mentor-dashboard': mentorDashboard, availability, 'mentor-profile': mentorProfile, earnings, admin, moderation };
+function render() { const r = route(), publicPage = ['home', 'discover', 'profile', 'auth', 'reset', 'goals', 'booking', 'checkout', 'confirmation', 'mentor-apply'].includes(r); document.title = meta().title + ' · DevMentor'; const content = uiState !== 'normal' ? stateView() : (views[r] ? views[r]() : empty('Tego ekranu nie ma w makiecie.', 'Wróć do strony głównej.', 'home', 'Strona główna')); app.innerHTML = `<div class="demo"><span><strong>DEMO KONCEPCJI</strong> · 25 ekranów · fikcyjne dane · operacje lokalne</span><div class="demo-controls"><label>Rola<select id="role" aria-label="Rola demonstracyjna">${Object.entries(roleNames).map(([k, v]) => `<option value="${k}" ${state.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label><label>Stan ekranu<select id="ui-state" aria-label="Stan ekranu">${[['normal', 'Interaktywny'], ['loading', 'Loading'], ['empty', 'Empty'], ['error', 'Error'], ['success', 'Success']].map(([k, v]) => `<option value="${k}" ${uiState === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label><button data-action="screen-map">Mapa ekranów</button><button data-action="load-demo">Dane przykładowe</button><button data-action="reset-demo">Reset</button></div></div><header class="header"><a class="brand" href="#home" aria-label="DevMentor — strona główna"><span class="mark" aria-hidden="true">m</span>DevMentor<span style="color:#86a26a">.</span></a><nav aria-label="Główna nawigacja"><a class="nav-link ${r === 'discover' ? 'active' : ''}" href="#discover">Znajdź mentora</a><a class="nav-link" href="#mentor-apply">Zostań mentorem</a><a class="nav-link" href="#${panelHome()}">Mój panel</a><div class="mobile-panel" style="display:none">${navigation()}</div></nav><div class="right"><a class="nav-link small" href="#support">Potrzebujesz pomocy?</a>${btn(state.logged ? 'Mój pulpit ↗' : 'Zaloguj się ↗', state.logged ? panelHome() : 'auth', 'secondary')}<button class="menu-toggle" data-action="menu" aria-expanded="false" aria-label="Otwórz menu">☰</button></div></header><div class="layout">${!publicPage ? `<aside class="sidebar" aria-label="Nawigacja panelu"><p>${roleNames[state.role]} · demo</p>${navigation()}<div class="aside-card"><strong>Twój rytm.<br>Twój kierunek.</strong><p class="small" style="padding:0;text-transform:none;letter-spacing:0">Dobry krok jest wart rozmowy.</p><a href="#discover" style="padding:0">Znajdź mentora ↗</a></div></aside>` : ''}<main id="main" class="main ${publicPage ? 'public' : ''}" tabindex="-1">${publicPage && (r !== 'home' || uiState !== 'normal') ? `<div class="wrap">${content}</div>` : content}</main></div><footer class="footer"><a class="brand" href="#home">DevMentor.</a><span>Wstępna koncepcja · 2026 · profile, opinie i transakcje fikcyjne</span><div class="actions"><button class="link-button" data-action="screen-info">Specyfikacja tego ekranu</button><a href="../START.html">Dokumentacja projektu ↗</a></div></footer>`; }
+function parseRoute() { const q = new URLSearchParams(location.hash.split('?')[1] || ''); if (q.get('mentor'))
+    selectedMentor = q.get('mentor'); if (q.get('topic'))
+    topic = q.get('topic'); if (q.get('case'))
+    currentCase = q.get('case'); if (q.get('session'))
+    activeSessionId = q.get('session'); uiState = 'normal'; render(); window.scrollTo(0, 0); }
+const id = (prefix) => prefix + '-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 5).toUpperCase();
+const canChange = (s) => s.status === 'scheduled' && new Date(s.start).getTime() - new Date('2026-11-03T10:00:00+01:00').getTime() >= 24 * 3600000;
+function download(name, text, type = 'text/plain;charset=utf-8') { const url = URL.createObjectURL(new Blob([text], { type })), a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+document.addEventListener('click', event => {
+    const button = event.target.closest('[data-action]');
+    if (!button)
+        return;
+    const a = button.dataset.action, sid = button.dataset.id, s = state.sessions.find(x => x.id === sid);
+    switch (a) {
+        case 'menu': {
+            const header = document.querySelector('.header');
+            header.classList.toggle('open');
+            button.setAttribute('aria-expanded', String(header.classList.contains('open')));
+            break;
+        }
+        case 'how':
+            document.querySelector('#how')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+            break;
+        case 'normal':
+            uiState = 'normal';
+            render();
+            break;
+        case 'close-dialog':
+            dialog.close();
+            break;
+        case 'screen-map':
+            openDialog('25 ekranów. Jedna ścieżka rozwoju.', `<p class="small muted">Wybierz dowolny widok. W górnym pasku przełączysz stan i rolę demo.</p><div class="screen-map">${SCREEN_META.map(x => `<a href="#${x.route}" data-action="close-dialog"><strong>${x.id}</strong> · ${x.title}<br><span class="tiny muted">${x.role}</span></a>`).join('')}</div>`);
+            break;
+        case 'screen-info': {
+            const m = meta();
+            openDialog(m.id + ' · ' + m.title, `<p>${m.goal}</p><p class="small"><strong>Funkcje:</strong> ${m.features}</p><p class="small"><strong>UI:</strong> ${m.ui}</p><p class="small"><strong>Walidacje:</strong> ${m.validation}</p><p class="small"><strong>API:</strong> ${m.api}</p><p class="small"><strong>Loading:</strong> ${m.loading}</p><p class="small"><strong>Empty:</strong> ${m.empty}</p><p class="small"><strong>Error:</strong> ${m.error}</p><p class="small"><strong>Success:</strong> ${m.success}</p>`);
+            break;
+        }
+        case 'load-demo':
+            openDialog('Wczytać przykładową ścieżkę?', `<p class="small">Zastąpi bieżące dane lokalne: jedna sesja zaplanowana, jedna zakończona, przykładowa rozmowa. Możesz od razu przetestować panele.</p><div class="actions">${action('Wczytaj dane demo', 'confirm-load', '')}${action('Zachowaj moje dane', 'close-dialog', 'secondary')}</div>`);
+            break;
+        case 'confirm-load':
+            state = seed();
+            state.logged = true;
+            state.sessions = [{ id: 'DM-DEMO-DONE', mentorId: 'anna', start: '2026-11-02T10:00:00+01:00', status: 'completed', note: 'Przygotować portfolio.', reviewed: false, credit: false }, { id: 'DM-DEMO-NEXT', mentorId: 'anna', start: '2026-11-10T09:00:00+01:00', status: 'scheduled', note: '', reviewed: false, credit: false }];
+            state.messages.anna = ['Cześć! Chcę omówić strukturę mojego portfolio.'];
+            state.transactions = [{ id: 'ORD-DEMO', label: 'Sesja 1:1 · Anna', amount: 180, status: 'Opłacono demo' }];
+            save();
+            dialog.close();
+            go('dashboard');
+            toast('Wczytano przykładową ścieżkę.');
+            break;
+        case 'reset-demo':
+            openDialog('Zacząć od czystej kartki?', `<p class="small">Reset usuwa tylko dane tej makiety w tej przeglądarce.</p><div class="actions">${action('Resetuj demo', 'confirm-reset', 'danger')}${action('Zachowaj dane', 'close-dialog', 'secondary')}</div>`);
+            break;
+        case 'confirm-reset':
+            state = seed();
+            save();
+            slot = '';
+            rescheduleId = '';
+            selectedMentor = 'anna';
+            activeSessionId = '';
+            joined = false;
+            dialog.close();
+            go('home');
+            toast('Demo zresetowane.');
+            break;
+        case 'favorite': {
+            const m = button.dataset.id;
+            state.favorites = state.favorites.includes(m) ? state.favorites.filter(x => x !== m) : [...state.favorites, m];
+            save();
+            render();
+            toast('Zapisano listę ulubionych.');
+            break;
+        }
+        case 'reset-filters':
+            search = '';
+            topic = 'Wszystkie';
+            budget = 500;
+            language = 'Wszystkie';
+            onlyFavorites = false;
+            sort = 'recommended';
+            render();
+            break;
+        case 'auth-mode':
+            authMode = button.dataset.mode;
+            render();
+            break;
+        case 'start-booking':
+            selectedMentor = button.dataset.mentor || selectedMentor;
+            slot = '';
+            day = 0;
+            rescheduleId = '';
+            continuation = 'booking';
+            go(state.logged ? 'booking' : 'auth');
+            break;
+        case 'contact':
+            selectedMentor = button.dataset.mentor;
+            continuation = 'messages';
+            go(state.logged ? 'messages?mentor=' + selectedMentor : 'auth');
+            break;
+        case 'day':
+            day = Number(button.dataset.day);
+            slot = '';
+            render();
+            break;
+        case 'slot':
+            slot = button.dataset.time;
+            render();
+            break;
+        case 'booking-next':
+            if (!slot) {
+                toast('Wybierz godzinę spotkania.');
+                break;
+            }
+            if (rescheduleId) {
+                const old = state.sessions.find(x => x.id === rescheduleId);
+                if (old && canChange(old) && !unavailableSlot(old.mentorId, day, slot, old.id)) {
+                    old.start = slotISO();
+                    save();
+                    rescheduleId = '';
+                    sessionTab = 'scheduled';
+                    go('sessions');
+                    toast('Zapisano nowy termin. Bez dodatkowej płatności.');
+                }
+                else {
+                    toast('Zmiana niedostępna. Skontaktuj się z obsługą.');
+                }
+            }
+            else
+                go('checkout');
+            break;
+        case 'session-tab':
+            sessionTab = button.dataset.tab;
+            render();
+            break;
+        case 'reschedule':
+            if (s && canChange(s)) {
+                selectedMentor = s.mentorId;
+                rescheduleId = s.id;
+                slot = '';
+                go('booking');
+            }
+            else
+                go('support');
+            break;
+        case 'cancel':
+            if (s && canChange(s)) {
+                openDialog('Anulować to spotkanie?', `<p class="small">${esc(sessionMentor(s).name)} · ${esc(dateLabel(s.start))}</p><div class="notice">${s.credit ? '1 kredyt wróci do pakietu.' : 'Zlecenie zwrotu do pierwotnej metody płatności. Status: oczekuje (demo).'} Bez opłaty przy zachowaniu 24 h.</div><form data-form="cancel" data-id="${s.id}">${area('reason', 'Powód anulowania', '', 'required minlength="10" maxlength="500"')}${errorBox()}<div class="actions"><button class="btn danger">Potwierdź anulowanie</button>${action('Zachowaj sesję', 'close-dialog', 'secondary')}</div></form>`);
+            }
+            else {
+                toast('Mniej niż 24 h lub sesja nieaktywna. Skontaktuj się z obsługą.');
+                go('support');
+            }
+            break;
+        case 'open-room':
+            activeSessionId = sid;
+            joined = false;
+            go('room?session=' + sid);
+            break;
+        case 'join':
+            joined = true;
+            render();
+            toast('Połączono z pokojem demonstracyjnym.');
+            break;
+        case 'mic':
+            mic = !mic;
+            render();
+            break;
+        case 'camera':
+            camera = !camera;
+            render();
+            break;
+        case 'finish': {
+            const current = activeSession();
+            if (current?.status === 'scheduled') {
+                current.status = 'completed';
+                activeSessionId = current.id;
+                save();
+                joined = false;
+                go('review?session=' + current.id);
+            }
+            break;
+        }
+        case 'open-review':
+            activeSessionId = sid;
+            go('review?session=' + sid);
+            break;
+        case 'thread':
+            selectedMentor = button.dataset.mentor;
+            go('messages?mentor=' + selectedMentor);
+            break;
+        case 'logout':
+            state.logged = false;
+            save();
+            go('home');
+            toast('Wylogowano z demo.');
+            break;
+        case 'calendar': {
+            const current = s || latest();
+            if (current) {
+                const stamp = (iso) => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z/, 'Z');
+                const content = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//DevMentor//Concept//PL', 'BEGIN:VEVENT', 'UID:' + current.id + '@devmentor.example', 'DTSTAMP:20261103T090000Z', 'DTSTART:' + stamp(current.start), 'DTEND:' + stamp(new Date(new Date(current.start).getTime() + 50 * 60000).toISOString()), 'SUMMARY:DevMentor DEMO - sesja mentoringowa', 'DESCRIPTION:Wydarzenie demonstracyjne. Bez prawdziwego polaczenia.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+                download('devmentor-' + current.id + '.ics', content, 'text/calendar;charset=utf-8');
+                toast('Pobrano plik kalendarza.');
+            }
+            break;
+        }
+        case 'receipt': {
+            const t = state.transactions.find(x => x.id === sid);
+            if (t)
+                download('DEMO-' + t.id + '.txt', 'DEMO — NIE JEST DOKUMENTEM FISKALNYM\nDevMentor · potwierdzenie przykładowe\nNumer: ' + t.id + '\nPozycja: ' + t.label + '\nKwota: ' + money(t.amount) + '\nStatus: ' + t.status);
+            break;
+        }
+        case 'subscription-toggle':
+            openDialog(state.subscription === 'active' ? 'Wstrzymać odnowienie?' : 'Wznowić automatyczne odnowienie?', `<p class="small">${state.subscription === 'active' ? 'Kolejne obciążenie zostanie wyłączone. Zaplanowane sesje i kredyty zostają.' : 'Nowe odnowienie za ' + money(packageCost()) + ' po 30 dniach od zegara demo. Zachowujesz kontrolę w panelu.'}</p><div class="actions">${action('Potwierdź zmianę (demo)', 'confirm-subscription-toggle', '')}${action('Wróć', 'close-dialog', 'secondary')}</div>`);
+            break;
+        case 'confirm-subscription-toggle':
+            state.subscription = state.subscription === 'active' ? 'paused' : 'active';
+            state.renew = state.subscription === 'active';
+            state.renewal = '2026-12-03';
+            save();
+            dialog.close();
+            render();
+            toast('Zmieniono ustawienia odnowienia.');
+            break;
+        case 'subscription-cancel':
+            openDialog('Wyłączyć dalsze odnowienia?', `<p class="small">Nie anulujemy zaplanowanych sesji. ${state.credits} kredytów pozostaje do wykorzystania do końca ważności.</p><div class="actions">${action('Wyłącz odnowienia', 'confirm-subscription-cancel', '')}${action('Zachowaj plan', 'close-dialog', 'secondary')}</div>`);
+            break;
+        case 'confirm-subscription-cancel':
+            state.subscription = 'cancelled';
+            state.renew = false;
+            save();
+            dialog.close();
+            render();
+            toast('Dalsze odnowienia wyłączone.');
+            break;
+        case 'availability-slot': {
+            const x = button.dataset.slot;
+            state.availability = state.availability.includes(x) ? state.availability.filter(v => v !== x) : [...state.availability, x];
+            render();
+            break;
+        }
+        case 'save-availability':
+            save();
+            toast('Zapisano dostępność w demo.');
+            break;
+        case 'payout':
+            if (state.payout > 0)
+                openDialog('Zlecić wypłatę?', `<p class="small">Kwota netto: <strong>${money(state.payout)}</strong>. Konto PSP zweryfikowane w symulacji. Prawdziwy przelew nie zostanie wykonany.</p><div class="actions">${action('Zleć wypłatę demo', 'confirm-payout', '')}${action('Wróć', 'close-dialog', 'secondary')}</div>`);
+            break;
+        case 'confirm-payout':
+            if (state.payout > 0) {
+                state.payout = 0;
+                state.payoutPending = true;
+                save();
+                dialog.close();
+                render();
+                toast('Zlecono wypłatę w demo.');
+            }
+            break;
+    }
+});
+document.addEventListener('change', event => { const el = event.target; if (el.id === 'role') {
+    state.role = el.value;
+    save();
+    go(panelHome());
+    return;
+} if (el.id === 'ui-state') {
+    uiState = el.value;
+    render();
+    return;
+} if (el.dataset.milestone) {
+    state.milestones[Number(el.dataset.milestone)] = el.checked;
+    save();
+    render();
+    toast('Postęp zapisany.');
+    return;
+} if (['topic', 'budget', 'language', 'sort', 'favorites'].includes(el.id)) {
+    if (el.id === 'topic')
+        topic = el.value;
+    if (el.id === 'budget')
+        budget = Number(el.value);
+    if (el.id === 'language')
+        language = el.value;
+    if (el.id === 'sort')
+        sort = el.value;
+    if (el.id === 'favorites')
+        onlyFavorites = el.checked;
+    render();
+} if (el.name === 'goal') {
+    document.querySelectorAll('.choice').forEach(c => c.classList.remove('selected'));
+    el.closest('.choice')?.classList.add('selected');
+} });
+document.addEventListener('input', event => { const el = event.target; if (el.id === 'search') {
+    search = el.value;
+    clearTimeout(filterTimer);
+    filterTimer = window.setTimeout(() => { const start = el.selectionStart; render(); const next = document.querySelector('#search'); next?.focus(); next?.setSelectionRange(start, start); }, 300);
+} });
+document.addEventListener('submit', event => {
+    var _a;
+    const form = event.target.closest('form[data-form]');
+    if (!form)
+        return;
+    event.preventDefault();
+    const f = new FormData(form), v = (name) => String(f.get(name) || '').trim(), kind = form.dataset.form;
+    switch (kind) {
+        case 'auth':
+            state.logged = true;
+            state.email = v('email');
+            if (authMode === 'register')
+                state.name = v('name');
+            save();
+            go(continuation === 'messages' ? 'messages?mentor=' + selectedMentor : 'goals');
+            toast('Konto demo gotowe.');
+            break;
+        case 'reset':
+            openDialog('Sprawdź instrukcję.', `<p class="small">Jeśli konto istnieje, wysłano instrukcję resetu. To neutralny komunikat demonstracyjny — nie wysłaliśmy emaila.</p>${btn('Wróć do logowania', 'auth')}`);
+            break;
+        case 'goals':
+            if (v('goalText').length < 20) {
+                formError(form, 'Opisz cel w co najmniej 20 znakach.');
+                break;
+            }
+            state.goal = v('goal');
+            state.level = v('level');
+            state.goalText = v('goalText');
+            save();
+            go('booking');
+            break;
+        case 'checkout': {
+            const result = v('paymentResult');
+            if (result === 'Płatność odrzucona') {
+                formError(form, 'Płatność odrzucona. Nie utworzono sesji ani obciążenia. Wybierz Sukces, aby ponowić demo.');
+                break;
+            }
+            if (result === 'Termin właśnie zajęty') {
+                formError(form, '409 SLOT_TAKEN — termin zajął ktoś inny. Wróć do kalendarza i wybierz inny.');
+                break;
+            }
+            if (!slot) {
+                formError(form, 'Wybierz termin ponownie.');
+                break;
+            }
+            const iso = slotISO();
+            if (unavailableSlot(selectedMentor, day, slot)) {
+                formError(form, 'Termin jest już zajęty. Nie utworzono duplikatu.');
+                break;
+            }
+            const credit = state.credits > 0 && selectedMentor === 'anna';
+            if (credit)
+                state.credits--;
+            state.sessions.push({ id: id('DM'), mentorId: selectedMentor, start: iso, status: 'scheduled', note: '', reviewed: false, credit });
+            state.transactions.push({ id: id('ORD'), label: 'Sesja 1:1 · ' + mentor().name, amount: credit ? 0 : mentor().price, status: credit ? 'Kredyt z pakietu' : 'Opłacono demo' });
+            save();
+            go('confirmation');
+            break;
+        }
+        case 'cancel': {
+            const s = state.sessions.find(x => x.id === form.dataset.id);
+            if (!s || !canChange(s)) {
+                formError(form, 'Sesja nie może być anulowana. Skontaktuj się z obsługą.');
+                break;
+            }
+            if (v('reason').length < 10) {
+                formError(form, 'Podaj powód (minimum 10 znaków).');
+                break;
+            }
+            s.status = 'cancelled';
+            s.refund = s.credit ? 'Kredyt zwrócony' : 'Zwrot zlecony · oczekuje (demo)';
+            if (s.credit)
+                state.credits++;
+            save();
+            dialog.close();
+            sessionTab = 'cancelled';
+            render();
+            toast('Anulowano sesję. ' + s.refund);
+            break;
+        }
+        case 'notes': {
+            const s = activeSession();
+            if (s) {
+                s.note = v('note');
+                save();
+                toast('Notatka zapisana lokalnie.');
+            }
+            break;
+        }
+        case 'review': {
+            const s = state.sessions.find(x => x.id === form.dataset.id);
+            if (!s || s.status !== 'completed' || s.reviewed) {
+                formError(form, 'Opinię można zapisać raz po zakończonej sesji.');
+                break;
+            }
+            if (v('comment').length < 10 || !v('rating')) {
+                formError(form, 'Wybierz ocenę i wpisz co najmniej 10 znaków.');
+                break;
+            }
+            s.reviewed = true;
+            s.rating = Number(v('rating'));
+            s.comment = v('comment');
+            save();
+            go('plan');
+            toast('Dziękujemy. Opinia zapisana w demo.');
+            break;
+        }
+        case 'message':
+            if (!v('message')) {
+                toast('Wpisz wiadomość.');
+                break;
+            }
+            ((_a = state.messages)[selectedMentor] ?? (_a[selectedMentor] = [])).push(v('message'));
+            save();
+            render();
+            document.querySelector('#message')?.focus();
+            toast('Wiadomość zapisana lokalnie.');
+            break;
+        case 'package':
+            if (!state.sessions.some(s => s.status === 'completed' && s.mentorId === 'anna')) {
+                toast('Najpierw odbądź sesję z Anną.');
+                break;
+            }
+            state.subscription = 'active';
+            state.renew = f.has('renew');
+            state.renewal = '2026-12-03';
+            state.credits += 4;
+            state.transactions.push({ id: id('PKG'), label: 'Pakiet 4 sesji · Anna', amount: packageCost(), status: 'Opłacono demo' });
+            save();
+            render();
+            toast('Pakiet aktywny. Dodano 4 kredyty.');
+            break;
+        case 'settings':
+            if (v('name').length < 2) {
+                formError(form, 'Podaj imię (minimum 2 znaki).');
+                break;
+            }
+            state.name = v('name');
+            state.email = v('email');
+            state.timezone = v('timezone');
+            state.notifications = f.has('notifications');
+            save();
+            render();
+            toast('Ustawienia zapisane.');
+            break;
+        case 'support':
+            if (v('description').length < 20) {
+                formError(form, 'Opisz problem w co najmniej 20 znakach.');
+                break;
+            }
+            if (v('sessionId') && !state.sessions.some(s => s.id === v('sessionId'))) {
+                formError(form, 'Nie znaleziono tej sesji na Twoim koncie demo.');
+                break;
+            }
+            state.tickets.push({ id: id('HELP'), category: v('category'), text: v('description'), status: 'open' });
+            save();
+            render();
+            toast('Utworzono zgłoszenie ' + state.tickets[state.tickets.length - 1].id);
+            break;
+        case 'mentor-apply':
+            if (v('bio').length < 50) {
+                formError(form, 'Opis powinien mieć minimum 50 znaków.');
+                break;
+            }
+            if (state.application) {
+                formError(form, 'Masz już aktywną aplikację.');
+                break;
+            }
+            state.application = { name: v('candidateName'), bio: v('bio'), topic: v('specialty'), price: Number(v('price')), years: Number(v('years')), status: 'pending' };
+            state.profileBio = v('bio');
+            state.profilePrice = Number(v('price'));
+            state.profileHeadline = 'Mentor ' + v('specialty');
+            state.role = 'mentor';
+            state.logged = true;
+            save();
+            go('mentor-dashboard');
+            toast('Aplikacja oczekuje na weryfikację.');
+            break;
+        case 'mentor-profile':
+            if (v('profileBio').length < 50 || v('headline').length < 10) {
+                formError(form, 'Sprawdź długość nagłówka i opisu.');
+                break;
+            }
+            state.profileBio = v('profileBio');
+            state.profileHeadline = v('headline');
+            state.profilePrice = Number(v('profilePrice'));
+            if (state.application?.status === 'approved') {
+                state.application.bio = state.profileBio;
+                state.application.price = state.profilePrice;
+            }
+            save();
+            render();
+            toast('Profil zapisany.');
+            break;
+        case 'decision':
+            if (v('reason').length < 10) {
+                formError(form, 'Uzasadnij decyzję w co najmniej 10 znakach.');
+                break;
+            }
+            if (state.role !== 'admin') {
+                formError(form, '403 — przełącz rolę demo na Administrator.');
+                break;
+            }
+            if (currentCase === 'application' && state.application) {
+                state.application.status = v('decision') === 'Zatwierdź mentora' ? 'approved' : 'rejected';
+                state.application.decision = v('reason');
+            }
+            else {
+                const t = state.tickets.find(x => x.id === currentCase);
+                if (t) {
+                    t.status = 'resolved';
+                    t.decision = v('reason');
+                }
+            }
+            save();
+            go('admin');
+            toast('Decyzja zapisana w lokalnej sprawie.');
+            break;
+    }
+});
+document.addEventListener('click', event => { const a = event.target.closest('a[href^="#"]'); if (a?.classList.contains('skip')) {
+    event.preventDefault();
+    document.querySelector('#main')?.focus();
+    return;
+} if (a && dialog.open)
+    dialog.close(); });
+window.addEventListener('hashchange', parseRoute);
+parseRoute();
