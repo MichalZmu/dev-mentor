@@ -27,7 +27,13 @@ test("demo seeding bootstraps trusted roles, future availability and an explicit
   resolveTime.mockReturnValue(["2026-11-05T09:00:00.000Z"]);
   resolveTime.mockReturnValueOnce([]); // DST gaps produce no synthetic slot.
   const execute = vi.fn().mockResolvedValue([]);
-  const em = { getConnection: () => ({ execute }) } as unknown as EntityManager;
+  const manager = {
+    getConnection: () => ({ execute }),
+    getTransactionContext: () => "transaction",
+  };
+  const em = {
+    transactional: (fn: (em: unknown) => unknown) => fn(manager),
+  } as unknown as EntityManager;
   const identities = {
     menteeId: "mentee",
     mentorId: "mentor",
@@ -36,6 +42,7 @@ test("demo seeding bootstraps trusted roles, future availability and an explicit
   await expect(seedDemoPlatform(em, identities)).resolves.toEqual({
     mentorId: "demo-mentor",
     bookingId: "demo-completed-session",
+    seeded: true,
   });
   expect(
     repository.ensureUser.mock.calls.map((call) => call[0]?.roles),
@@ -62,4 +69,62 @@ test("demo seeding bootstraps trusted roles, future availability and an explicit
     expect.objectContaining({ id: "mentee" }),
     "demo-mentor",
   );
+});
+
+test.each([true, false])(
+  "completed=%s seed checks the database marker under its transaction",
+  async (completed) => {
+    const execute = vi.fn().mockImplementation((sql: string) => {
+      if (sql.startsWith("select completed_at")) return [{ completed }];
+      if (sql.startsWith("select id from domain_users"))
+        return [{ id: "mentee" }, { id: "mentor" }, { id: "admin" }];
+      if (sql.startsWith("select (goals")) return [{ initialized: true }];
+      return [];
+    });
+    vi.useFakeTimers();
+    vi.setSystemTime("2027-01-01T10:00:00Z");
+    const context = {};
+    const manager = {
+      getConnection: () => ({ execute }),
+      getTransactionContext: () => context,
+    };
+    const em = {
+      transactional: (fn: (em: unknown) => unknown) => fn(manager),
+    } as unknown as EntityManager;
+    vi.mocked(localTimeCandidates).mockReturnValue([]);
+    const result = await seedDemoPlatform(em, {
+      menteeId: "mentee",
+      mentorId: "mentor",
+      adminId: "admin",
+    });
+    expect(result.seeded).toBe(!completed);
+    if (completed) expect(localTimeCandidates).not.toHaveBeenCalled();
+    expect(repository.ensureUser).not.toHaveBeenCalled();
+    expect(repository.saveGoals).not.toHaveBeenCalled();
+    expect(repository.conversation).toHaveBeenCalledTimes(completed ? 0 : 1);
+    expect(execute.mock.calls.every((call) => call[3] === context)).toBe(true);
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("for update"),
+      [],
+      "all",
+      context,
+    );
+  },
+);
+test("an explicit incomplete marker and empty goals resume seed work", async () => {
+  const execute = vi.fn().mockImplementation((sql: string) => {
+    if (sql.startsWith("select completed_at")) return [{ completed: false }];
+    if (sql.startsWith("select (goals")) return [{ initialized: false }];
+    return [];
+  });
+  const manager = {
+    getConnection: () => ({ execute }),
+    getTransactionContext: () => undefined,
+  };
+  const em = {
+    transactional: (fn: (em: unknown) => unknown) => fn(manager),
+  } as unknown as EntityManager;
+  await seedDemoPlatform(em, { menteeId: "m", mentorId: "t", adminId: "a" });
+  expect(repository.ensureUser).toHaveBeenCalledTimes(3);
+  expect(repository.saveGoals).toHaveBeenCalledOnce();
 });

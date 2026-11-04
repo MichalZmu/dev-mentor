@@ -45,13 +45,15 @@ try {
     adminId: await ensureIdentity("admin@example.test", "Administrator Demo"),
   };
   const orm = await database.get();
-  await withEntityManager(orm, (em) => seedDemoPlatform(em, identities));
+  const result = await withEntityManager(orm, (em) =>
+    seedDemoPlatform(em, identities),
+  );
   console.log(
     JSON.stringify({
       level: "info",
       time: new Date().toISOString(),
       operation: "seed.demo",
-      code: "DEMO_SEED_OK",
+      code: result.seeded ? "DEMO_SEED_OK" : "DEMO_SEED_SKIPPED",
       users: ["demo@example.test", "mentor@example.test", "admin@example.test"],
     }),
   );

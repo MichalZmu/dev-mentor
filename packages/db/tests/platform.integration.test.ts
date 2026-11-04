@@ -1080,7 +1080,13 @@ test("programmatic and CLI migrations succeed from read-only cwd without snapsho
         await verify.em
           .getConnection()
           .execute("select name from mikro_orm_migrations order by name"),
-      ).toHaveLength(4);
+      ).toEqual([
+        { name: "Migration202611030001" },
+        { name: "Migration202611030002" },
+        { name: "Migration202611030003" },
+        { name: "Migration202611030004" },
+        { name: "Migration202611040001" },
+      ]);
     } finally {
       await verify.close(true);
     }
