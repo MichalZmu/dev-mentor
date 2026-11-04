@@ -5,7 +5,7 @@ Cele:
 - Zweryfikować bootstrap i ponowienia na izolowanej bazie, naprawić zatwierdzone blokady bramki i opublikować PR po pełnej walidacji.
 
 Specyfikacja: [Idempotent setup](../specs/implemented/2026-11-04-idempotent-setup.md)
-Status: in-progress
+Status: done
 
 ## Wpisy
 
@@ -33,3 +33,8 @@ Do zrobienia: minimalne konfiguracje, systemowe biblioteki bez zmiany sudoers, p
 Zakres: instalator, idempotentny transakcyjny seed, nowa migracja, regresje i dokumentacja; minimalne wyłączenie dystrybucji skilli z Prettier/ESLint. Wszystkie11komend bramki PASS:434unit/coverage,55integracji,6E2E.
 Decyzje / pułapki: systemowe biblioteki zainstalowano przez WSL root bez zmiany sudoers; rzeczywiste przeglądarki działają bez /tmp workaround. Specyfikację przeniesiono do implemented, zaktualizowano aktywny link i dowody.
 Do zrobienia: push i publikacja PR zgodnie z om-open-pr; później review i QA przed integracją.
+
+### 2026-11-04 — potwierdzenie publikacji i przekazanie do review
+Zakres: commit9033e46 wypchnięto; PR#2 https://github.com/MichalZmu/dev-mentor/pull/2 otwarto do main i potwierdzono pełny zestaw etykiet oraz podsumowanie z dowodami.
+Decyzje / pułapki: lokalna bramka11/11PASS; CI jest osobnym sygnałem. PR wymaga niezależnego review i qa-approved; naprawa środowiska nie zmienia sudoers.
+Do zrobienia: brak w zakresie implementacji i publikacji; review/QA i integracja pozostają odrębnymi etapami. Ten commit zapisuje bieżące potwierdzenie publikacji, poprzedni miał własny wpis.
