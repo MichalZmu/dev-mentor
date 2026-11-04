@@ -44,3 +44,8 @@ next-env.d.ts
 # verification reports
 /playwright-report/
 /test-results/
+
+# Agent QA runtime state and credentials
+/.ai/qa/artifacts_*/
+/.ai/qa/test-env.json
+/.ai/qa/test-env.env
