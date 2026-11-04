@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import { parseEnv } from "node:util";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 /** Dependency-free bootstrap: it must run before npm ci or tsx is available. */
 export function runSetup(
@@ -34,6 +34,38 @@ export function runSetup(
       });
       if (result.error || result.status !== 0) throw new Error("command");
       return result.stdout;
+    }
+    function verifyRuntime(): void {
+      // Import dependencies only; CLI entry points would migrate or seed the database.
+      const imports = [
+        "dotenv",
+        "@devmentor/db",
+        "better-auth/crypto",
+        "better-auth/db/migration",
+        pathToFileURL(resolve(root, "packages/app/server/auth.ts")).href,
+      ]
+        .map((specifier) => "import(" + JSON.stringify(specifier) + ")")
+        .join(",");
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--conditions=react-server",
+          "--import",
+          "tsx",
+          "--input-type=module",
+          "--eval",
+          "await Promise.all([" + imports + "]);",
+        ],
+        {
+          cwd: root,
+          env,
+          encoding: "utf8",
+          timeout: 120_000,
+          maxBuffer: 16 * 1024 * 1024,
+        },
+      );
+      if (result.error || result.status !== 0)
+        throw new Error("incomplete-runtime");
     }
     if (command(["--version"]).trim() !== "11.20.0") throw new Error("npm");
     console.log("[done] Node and npm");
@@ -64,6 +96,7 @@ export function runSetup(
     if (installed) {
       try {
         command(["ls", "--all", "--offline"], 120_000);
+        verifyRuntime();
       } catch {
         installed = false;
       }
@@ -77,6 +110,7 @@ export function runSetup(
         )
       )
         throw new Error("incomplete");
+      verifyRuntime();
       writeFileSync(stamp, expected);
     }
     console.log(

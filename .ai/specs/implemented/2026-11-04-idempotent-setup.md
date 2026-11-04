@@ -36,7 +36,7 @@ The existing read-only-CWD migration integration asserted exactly four applied m
 The added seed-state migration correctly makes five; update that test to assert the exact
 five names for both programmatic and CLI migration paths. No production scope change.
 
-## Current result
+## Validation before review
 All acceptance criteria and the full ordered validation gate passed after authorized
 gate remediation. Unit coverage434/434, integration55/55, E2E6/6, build, format/lint,
 typecheck, dependency checks, both browser installers and security audit passed.
@@ -52,3 +52,32 @@ The user authorized repairing the two remaining blockers and resuming PR publica
   with elevated system privileges and all application checks as the normal workspace user.
 - Verify actual browsers without temporary LD_LIBRARY_PATH workarounds, inspect diff,
   finalize artifacts and continue om-open-pr once the new result is ready.
+
+## Review remediation — 2026-11-04
+The user approved fixing both findings on PR #2.
+1. Add a regression with a runtime entry point and an internal module missing while
+   package manifests and npm ls remain valid.
+2. Verify CLI dependencies by importing their modules in a bounded child Node process
+   using react-server and tsx, before marking an installation reusable and after npm ci.
+   Import only dependency/server modules without calling auth/DB initializers or CLI entry points.
+3. On failure, reinstall once through the existing npm ci branch and recheck; if still
+   broken, fail safely in the dependencies stage without touching PostgreSQL.
+4. Add real PostgreSQL rollback/up evidence for Migration202611040001 with existing
+   data preserved and a safe subsequent seed.
+5. Re-run full ordered gate, inspect diff and push the fixes to the same PR.
+The specification is active again until these acceptance criteria are verified.
+
+Validation adjustment: the installed MikroORM IMigrator has no getExecutedMigrations API.
+The downgrade test reads the actual mikro_orm_migrations table using the same SQL
+pattern as the existing read-only-CWD integration test.
+
+
+## Current result after review fixes
+Both review findings are addressed. The runtime probe and its failure/reinstall
+paths have unit regressions proven to fail before the fix; real setup tests repair
+missing dotenv/pg modules even though npm ls succeeds. Real PostgreSQL down/up
+preserves existing user/booking/payment data and supports safe reseeding.
+The full ordered gate passed: 438 unit tests and required coverage, 56 integration
+tests, six E2E tests, format/lint/type/dependency checks, build, browser installers
+and security audit. No checks skipped.
+Evidence: ../../runs/evidence/2026-11-04-idempotent-setup-review-fixes.md

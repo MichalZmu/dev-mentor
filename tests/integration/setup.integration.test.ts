@@ -222,10 +222,25 @@ test("real fresh setup, repeat, preservation, restart, database replacement and 
     ).toEqual([
       { goals: { description: "edited" }, roles: ["mentee", "support"] },
     ]);
-    await rm(resolve(scratch, "node_modules/tsx/dist/cli.mjs"));
-    expect((await command(["run", "setup"], retryEnv)).stdout).toContain(
-      "[done] Dependencies installed",
-    );
+    for (const path of [
+      "tsx/dist/cli.mjs",
+      "dotenv/lib/main.js",
+      "pg/lib/client.js",
+    ]) {
+      await rm(resolve(scratch, "node_modules", path));
+      // The package graph remains valid despite the missing executable/module file.
+      await command(["ls", "--all", "--offline"], retryEnv);
+      const repaired = await command(["run", "setup"], retryEnv);
+      expect(repaired.stdout).toContain("[done] Dependencies installed");
+      expect(repaired.stdout).toContain("[skip] Demo seed already completed");
+    }
+    expect(
+      (
+        await retryPool.query(
+          "select id,password from auth.account order by id",
+        )
+      ).rows,
+    ).toEqual(retryHashes);
   } finally {
     await pool.end();
     await retryPool?.end();

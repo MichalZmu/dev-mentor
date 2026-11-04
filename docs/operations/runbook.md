@@ -13,6 +13,9 @@ w razie potrzeby, tworzy brakujący .env, czeka na PostgreSQL, sprawdza połącz
 stosuje brakujące migracje i wykonuje seed. Zachowuje istniejący .env i
 pierwszeństwo zmiennych procesu; nie przestawia konfiguracji na demo.
 Wymaga APP_MODE=demo i lokalnych URL PostgreSQL/aplikacji.
+Kontrola zależności obejmuje także załadowanie modułów potrzebnych do migracji
+i seeda. Brakujący moduł powoduje ponowną instalację przed uruchomieniem
+PostgreSQL; nieudana naprawa kończy setup bez dalszych zmian w bazie.
 
 Ponowienie zachowuje dane i wolumen, nie resetuje haseł ani ról/celów.
 Znacznik seeda jest w bazie i powstaje atomowo z danymi domeny.

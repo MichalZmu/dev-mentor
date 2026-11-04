@@ -5,7 +5,7 @@ Cele:
 - Zweryfikować bootstrap i ponowienia na izolowanej bazie, naprawić zatwierdzone blokady bramki i opublikować PR po pełnej walidacji.
 
 Specyfikacja: [Idempotent setup](../specs/implemented/2026-11-04-idempotent-setup.md)
-Status: done
+Status: in-progress
 
 ## Wpisy
 
@@ -38,3 +38,13 @@ Do zrobienia: push i publikacja PR zgodnie z om-open-pr; później review i QA p
 Zakres: commit9033e46 wypchnięto; PR#2 https://github.com/MichalZmu/dev-mentor/pull/2 otwarto do main i potwierdzono pełny zestaw etykiet oraz podsumowanie z dowodami.
 Decyzje / pułapki: lokalna bramka11/11PASS; CI jest osobnym sygnałem. PR wymaga niezależnego review i qa-approved; naprawa środowiska nie zmienia sudoers.
 Do zrobienia: brak w zakresie implementacji i publikacji; review/QA i integracja pozostają odrębnymi etapami. Ten commit zapisuje bieżące potwierdzenie publikacji, poprzedni miał własny wpis.
+
+### 2026-11-04 — wznowienie po review PR#2
+Zakres: użytkownik zlecił poprawienie obu ustaleń: naprawę brakujących modułów runtime mimo npm ls=0 oraz integracyjny dowód down/up migracji.
+Decyzje / pułapki: dotychczasowy fingerprint i trzy pliki CLI nie dowodzą ładowalności zależności; zachowujemy konfigurację/bazę i nie uruchamiamy seeda ani migracji w probe.
+Do zrobienia: regresja fail-before-fix, minimalny probe runtime w osobnym procesie, realny downgrade/upgrade na izolowanej bazie, pełna bramka i aktualizacja tego samego PR.
+
+### 2026-11-04 — commit poprawek obu ustaleń review
+Zakres: ograniczony probe modułów CLI przed pominięciem instalacji i po npm ci; regresje jednostkowe oraz realne naprawy dotenv/pg; integracyjny down/up migracji z zachowaniem danych, dokumentacja i lessons.
+Decyzje / pułapki: trzy regresje zawiodły przed poprawką; historię migracji odczytujemy z SQL zgodnie z zainstalowanym API. Po przejściowym DNS ponowiono instalator i kolejne kroki w kolejności; pełna bramka11/11PASS:438unit/coverage,56integracji,6E2E.
+Do zrobienia: wypchnąć poprawki do istniejącego PR#2 i zaktualizować opis/dowody; wymagane pozostają review i QA przed merge.

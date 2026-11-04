@@ -149,6 +149,9 @@ Instalator sprawdza wersje narzędzi, instaluje brakujące lub nieaktualne zale�
 przez npm ci, tworzy tylko brakujący .env z .env.example, zapewnia gotowość
 PostgreSQL, sprawdza połączenie oraz wykonuje migracje i seed demo. Nie instaluje
 narzędzi systemowych i nie uruchamia web/workera ani CI.
+Kontrola zależności obejmuje także załadowanie modułów potrzebnych do migracji
+i seeda. Brakujący moduł powoduje ponowną instalację przed uruchomieniem
+PostgreSQL; nieudana naprawa kończy setup bez dalszych zmian w bazie.
 
 Ponowienie npm run setup zachowuje istniejący .env, konta, hasła, role, cele
 i wolumen bazy. Zmienne procesu mają pierwszeństwo. Instalator wymaga jawnego

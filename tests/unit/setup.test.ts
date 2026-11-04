@@ -26,9 +26,10 @@ function put(path: string, content = ""): void {
   writeFileSync(target, content);
 }
 function commands(): string[] {
-  return mocks.spawn.mock.calls.map((call: unknown[]) =>
-    (call[1] as string[]).slice(1).join(" "),
-  );
+  return mocks.spawn.mock.calls.map((call: unknown[]) => {
+    const args = call[1] as string[];
+    return args.includes("--eval") ? "verify-runtime" : args.slice(1).join(" ");
+  });
 }
 beforeEach(() => {
   vi.clearAllMocks();
@@ -68,6 +69,7 @@ test("fresh setup installs, copies configuration, runs all stages and prints web
     "--version",
     "ci",
     "ls --all --offline",
+    "verify-runtime",
     "run db:up",
     "run db:check",
     "run migrate",
@@ -224,4 +226,72 @@ test("CLI guard supports absent argv and exits nonzero with no npm invocation", 
     process.argv = argv;
     process.exitCode = exitCode;
   }
+});
+
+test("a broken runtime module triggers reinstall even when npm ls succeeds", () => {
+  expect(runSetup(root)).toBe(0);
+  mocks.spawn.mockClear();
+  const original = mocks.spawn.getMockImplementation();
+  let broken = true;
+  mocks.spawn.mockImplementation((node: string, args: string[]) => {
+    if (args.includes("--eval") && broken) {
+      broken = false;
+      return { status: 1, stderr: "private runtime loader failure" };
+    }
+    return original?.(node, args);
+  });
+  expect(runSetup(root)).toBe(0);
+  expect(commands()).toContain("ci");
+  expect(
+    mocks.spawn.mock.calls.filter((call: unknown[]) =>
+      (call[1] as string[]).includes("--eval"),
+    ),
+  ).toHaveLength(2);
+  expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(
+    "private runtime loader failure",
+  );
+});
+test.each([
+  { status: 1, stderr: "private runtime loader failure" },
+  { status: null, error: new Error("private timeout") },
+])(
+  "a runtime probe still failing after npm ci fails before PostgreSQL: %o",
+  (failure) => {
+    const original = mocks.spawn.getMockImplementation();
+    mocks.spawn.mockImplementation((node: string, args: string[]) =>
+      args.includes("--eval") ? failure : original?.(node, args),
+    );
+    expect(runSetup(root)).toBe(1);
+    expect(commands()).toContain("ci");
+    expect(commands()).not.toContain("run db:up");
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("failed at dependencies"),
+    );
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(
+      "private",
+    );
+  },
+);
+
+test("runtime verification uses the server boundary and only dependency modules in a bounded child process", () => {
+  expect(runSetup(root)).toBe(0);
+  const call = mocks.spawn.mock.calls.find((call: unknown[]) =>
+    (call[1] as string[]).includes("--eval"),
+  );
+  expect(call).toEqual([
+    process.execPath,
+    expect.arrayContaining([
+      "--conditions=react-server",
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "--eval",
+      expect.stringContaining('import("dotenv")'),
+    ]),
+    expect.objectContaining({ cwd: root, timeout: 120000 }),
+  ]);
+  const source = (call?.[1] as string[]).at(-1);
+  expect(source).toContain("packages/app/server/auth.ts");
+  expect(source).not.toContain("scripts/migrate");
+  expect(source).not.toContain("scripts/seed-demo");
 });
